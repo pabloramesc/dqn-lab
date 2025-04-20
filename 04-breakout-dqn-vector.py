@@ -159,9 +159,7 @@ while not terminated:
     score += reward
     terminated = done or trunc
 
-    print(
-        f"Steps: {steps}, Action: {action}, Reward: {reward}, Score: {score}, Lives: {info["lives"]}"
-    )
+    print(f"Steps: {steps}, Score: {score}, Lives: {info["lives"]}")
 
 env.close()
 
