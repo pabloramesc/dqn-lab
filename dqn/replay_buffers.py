@@ -161,14 +161,16 @@ class PriorityReplayBuffer(ReplayBuffer):
 
     def add_batch(self, batch: ExperiencesBatch, td_errors: np.ndarray = None) -> None:
         """
-        Add a batch of experiences to the priority replay buffer, with priorities based on the TD errors.
+        Add a batch of experiences to the priority replay buffer, with
+        priorities based on the TD errors.
 
         Parameters
         ----------
         batch : ExperiencesBatch
             A batch of experiences to be added to the buffer.
         td_errors : np.ndarray, optional
-            The temporal difference errors for each experience in the batch (default is None).
+            The temporal difference errors for each experience in the batch
+            (default is None).
         """
         super().add_batch(batch)
 
@@ -184,7 +186,8 @@ class PriorityReplayBuffer(ReplayBuffer):
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
         """
-        Sample a batch of experiences from the priority replay buffer, with priority sampling.
+        Sample a batch of experiences from the priority replay buffer, with
+        priority sampling.
 
         Parameters
         ----------
@@ -211,7 +214,8 @@ class PriorityReplayBuffer(ReplayBuffer):
 
     def update_priorities(self, indices: np.ndarray, td_errors: np.ndarray) -> None:
         """
-        Update the priorities of experiences in the buffer based on new TD errors.
+        Update the priorities of experiences in the buffer based on new TD
+        errors.
 
         Parameters
         ----------
