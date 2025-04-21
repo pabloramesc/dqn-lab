@@ -53,9 +53,9 @@ num_actions = env.action_space.n
 # Create the model and agent
 model = create_model(state_shape, num_actions)
 file_path = file_path = os.path.join("saved_models", "dqn-model-breakout.keras")
-policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-5)
+policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-6)
 memory = PriorityReplayBuffer(
-    max_size=200_000, alpha=0.6, beta=0.4, beta_annealing=1e-6
+    max_size=250_000, alpha=0.6, beta=0.4, beta_annealing=0.0
 )
 agent = DQNAgent(
     model,
@@ -73,7 +73,7 @@ agent = DQNAgent(
 # Load pre-trained model if it exists
 if os.path.exists(file_path):
     agent.load_model(file_path, compile=True)
-    agent.policy.epsilon = 0.2  # Resume with less exploration
+    agent.policy.epsilon = 0.86  # Resume with less exploration
 
 agent.model.summary()
 
@@ -88,7 +88,7 @@ preprocessors = VectorizedAtariPreprocessor(num_envs)
 # 🎓 Training using vectorized envs (faster ⚡)
 envs = gym.make_vec("ALE/Breakout-v5", num_envs=num_envs, vectorization_mode="sync")
 
-num_episodes = 1_000_000  # Max number of training episodes
+num_episodes = 100_000_000  # Max number of training episodes
 max_score = 400  # max score to stop training
 
 frames, _ = envs.reset()
