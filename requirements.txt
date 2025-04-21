@@ -1,0 +1,9 @@
+ale_py==0.10.2
+gym==0.26.2
+gymnasium==1.1.1
+keras==3.9.0
+matplotlib==3.10.1
+numpy==2.2.5
+opencv_python==4.11.0.86
+setuptools==76.0.0
+tensorflow==2.16.1
