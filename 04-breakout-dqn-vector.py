@@ -73,16 +73,16 @@ agent = DQNAgent(
 # Load pre-trained model if it exists
 if os.path.exists(file_path):
     agent.load_model(file_path, compile=True)
-    agent.policy.epsilon = 0.86  # Resume with less exploration
+    agent.policy.epsilon = 1.0  # Resume with less exploration
 
 agent.model.summary()
 
 
 # Create Atari frame preprocessor
-from dqn.atari_utils import VectorizedAtariPreprocessor
+from dqn.atari_utils import MultiEnvAtariFrameStacker
 
 num_envs = 16  # 🚀 Run 16 parallel environments
-preprocessors = VectorizedAtariPreprocessor(num_envs)
+frame_stacker = MultiEnvAtariFrameStacker(num_envs)
 
 # %%
 # 🎓 Training using vectorized envs (faster ⚡)
@@ -92,13 +92,13 @@ num_episodes = 100_000_000  # Max number of training episodes
 max_score = 400  # max score to stop training
 
 frames, _ = envs.reset()
-states = preprocessors.reset(frames)
+states = frame_stacker.reset(frames)
 scores = np.zeros(num_envs)
 while True:
     actions = agent.act_on_batch(states)
 
     frames, rewards, dones, truncs, infos = envs.step(actions)
-    next_states = preprocessors.preprocess(frames)
+    next_states = frame_stacker.add_frames(frames)
 
     clipped_rewards = np.clip(rewards, -1.0, +1.0)
     batch = ExperiencesBatch(states, actions, next_states, clipped_rewards, dones)
@@ -106,6 +106,8 @@ while True:
 
     states = next_states
     scores = (scores + rewards) * (~dones)
+    
+    frame_stacker.reset_done_envs(frames, dones)
 
     if agent.memory.size > 50_000:
         metrics = agent.train()
@@ -138,10 +140,10 @@ envs.close()
 env = gym.make("ALE/Breakout-v5", render_mode="human")
 frame, _ = env.reset()
 
-from dqn.atari_utils import AtariPreprocessor
+from dqn.atari_utils import AtariFrameStacker
 
-preprocessor = AtariPreprocessor()
-state = preprocessor.reset(frame)
+preprocessor = AtariFrameStacker()
+state = preprocessor.reset_stack(frame)
 
 # Set exploration to zero for evaluation
 agent.policy.decay_type = "fixed"
@@ -153,7 +155,7 @@ while not terminated:
 
     action = agent.act(state)
     frame, reward, done, trunc, info = env.step(action)
-    state = preprocessor.preprocess(frame)
+    state = preprocessor.add_frame(frame)
 
     steps += 1
     score += reward
