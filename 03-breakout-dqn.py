@@ -70,7 +70,7 @@ num_actions = env.action_space.n
 
 model = create_model(state_shape, num_actions)
 file_path = os.path.join("saved_models", "dqn-model-breakout.keras")
-policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-5)
+policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-6)
 agent = DQNAgent(
     model,
     batch_size=32,
@@ -86,14 +86,14 @@ agent = DQNAgent(
 # Load pre-trained model if it exists
 if os.path.exists(file_path):
     agent.load_model(file_path, compile=True)
-    agent.policy.epsilon = 0.2  # Resume with less exploration
+    agent.policy.epsilon = 1.0  # Resume with less exploration
 
 agent.model.summary()
 
 # Create Atari frame preprocessor
-from dqn.atari_utils import AtariPreprocessor
+from dqn.atari_utils import AtariFrameStacker
 
-frame_preprocessor = AtariPreprocessor()
+frame_stacker = AtariFrameStacker()
 
 # %%
 # 🚀 Train the Agent
@@ -103,13 +103,13 @@ max_score = 400  # max score to stop training
 
 for episode in range(num_episodes):
     frame, _ = env.reset()
-    state = frame_preprocessor.reset(frame)
+    state = frame_stacker.reset_stack(frame)
 
     step, score, terminated = 0, 0, False
     while not terminated:
         action = agent.act(state)
         frame, reward, done, trunc, info = env.step(action)
-        next_state = frame_preprocessor.preprocess(frame)
+        next_state = frame_stacker.add_frame(frame)
         clipped_reward = np.clip(reward, -1.0, +1.0)
 
         experience = Experience(state, action, next_state, clipped_reward, done)
@@ -149,10 +149,10 @@ env.close()
 env = gym.make("ALE/Breakout-v5", render_mode="human")
 frame, _ = env.reset()
 
-from dqn.atari_utils import AtariPreprocessor
+from dqn.atari_utils import AtariFrameStacker
 
-preprocessor = AtariPreprocessor()
-state = preprocessor.reset(frame)
+preprocessor = AtariFrameStacker()
+state = preprocessor.reset_stack(frame)
 
 # Set exploration to zero for evaluation
 agent.policy.decay_type = "fixed"
@@ -164,7 +164,7 @@ while not terminated:
 
     action = agent.act(state)
     frame, reward, done, trunc, info = env.step(action)
-    state = preprocessor.preprocess(frame)
+    state = preprocessor.add_frame(frame)
 
     steps += 1
     score += reward
