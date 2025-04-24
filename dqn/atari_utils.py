@@ -84,7 +84,7 @@ class AtariFrameStacker:
         """
         return np.stack(self.frames, axis=-1)
 
-    def reset_stack(self, frame: np.ndarray) -> np.ndarray:
+    def reset(self, frame: np.ndarray) -> np.ndarray:
         """
         Resets the processor with the initial frame by processing it
         and stacking it multiple times.
@@ -119,7 +119,7 @@ class AtariFrameStacker:
             The updated state after adding the new frame to the stack.
         """
         if len(self.frames) != self.stack_size:
-            self.reset_stack(frame)
+            self.reset(frame)
             return self.get_stacked_frames()
         processed_frame = process_atari_frame(frame)
         self.frames.pop(0)
@@ -145,9 +145,9 @@ class MultiEnvAtariFrameStacker:
         """
         self.num_envs = num_envs
         self.stack_size = stack_size
-        self.processors: list[AtariFrameStacker] = []
+        self.stackers: list[AtariFrameStacker] = []
         for _ in range(self.num_envs):
-            self.processors.append(AtariFrameStacker(self.stack_size))
+            self.stackers.append(AtariFrameStacker(self.stack_size))
 
     def get_stacked_frames(self) -> np.ndarray:
         """
@@ -158,7 +158,7 @@ class MultiEnvAtariFrameStacker:
         np.ndarray
             The stacked states for all environments.
         """
-        states = np.stack([p.get_stacked_frames() for p in self.processors], axis=-1)
+        states = np.stack([s.get_stacked_frames() for s in self.stackers], axis=0)
         return states
 
     def reset(self, frames: ArrayLike) -> np.ndarray:
@@ -175,10 +175,11 @@ class MultiEnvAtariFrameStacker:
         np.ndarray
             The states of all environments after reset.
         """
-        states = np.stack(
-            [p.reset(frame) for p, frame in zip(self.processors, frames)], axis=0
-        )
-        return states
+        states = []
+        for i, stacker in enumerate(self.stackers):
+            state = stacker.reset(frames[i])
+            states.append(state)
+        return np.stack(states, axis=0)
 
     def reset_done_envs(self, frames: ArrayLike, dones: ArrayLike) -> None:
         """
@@ -194,8 +195,8 @@ class MultiEnvAtariFrameStacker:
             means the environment is done and needs to be reset.
         """
         for i in np.arange(self.num_envs)[dones]:
-            p: AtariFrameStacker = self.processors[i]
-            p.reset_stack(frames[i])
+            p: AtariFrameStacker = self.stackers[i]
+            p.reset(frames[i])
 
     def add_frames(self, frames: ArrayLike) -> np.ndarray:
         """
@@ -211,11 +212,11 @@ class MultiEnvAtariFrameStacker:
         np.ndarray
             The updated states for all environments.
         """
-        states = np.stack(
-            [p.process(frame) for p, frame in zip(self.processors, frames)],
-            axis=0,
-        )
-        return states
+        states = []
+        for i, stacker in enumerate(self.stackers):
+            state = stacker.add_frame(frames[i])
+            states.append(state)
+        return np.stack(states, axis=0)
 
 
 def plot_stacked_frames(state: np.ndarray):
@@ -280,7 +281,7 @@ if __name__ == "__main__":
 
     frame_processor = AtariFrameStacker()
     frame = env.reset()[0]
-    state = frame_processor.reset_stack(frame)
+    state = frame_processor.reset(frame)
     for i in range(100):
         print(f"Step {i}")
         action = env.action_space.sample()
