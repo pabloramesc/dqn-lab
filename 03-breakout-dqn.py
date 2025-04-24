@@ -103,7 +103,7 @@ max_score = 400  # max score to stop training
 
 for episode in range(num_episodes):
     frame, _ = env.reset()
-    state = frame_stacker.reset_stack(frame)
+    state = frame_stacker.reset(frame)
 
     step, score, terminated = 0, 0, False
     while not terminated:
@@ -152,7 +152,7 @@ frame, _ = env.reset()
 from dqn.atari_utils import AtariFrameStacker
 
 preprocessor = AtariFrameStacker()
-state = preprocessor.reset_stack(frame)
+state = preprocessor.reset(frame)
 
 # Set exploration to zero for evaluation
 agent.policy.decay_type = "fixed"

@@ -143,7 +143,7 @@ frame, _ = env.reset()
 from dqn.atari_utils import AtariFrameStacker
 
 preprocessor = AtariFrameStacker()
-state = preprocessor.reset_stack(frame)
+state = preprocessor.reset(frame)
 
 # Set exploration to zero for evaluation
 agent.policy.decay_type = "fixed"
