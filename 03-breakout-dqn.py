@@ -18,17 +18,17 @@ gym.register_envs(ale_py)
 env = gym.make("ALE/Breakout-v5", render_mode="human")
 env.reset()
 
-step, score, terminated = 0, 0, False
+steps, score, terminated = 0, 0, False
 while not terminated:
     env.render()
     action = env.action_space.sample()
     _, reward, done, trunc, info = env.step(action)
 
-    step += 1
+    steps += 1
     score += reward
     terminated = done or trunc
 
-    print(f"Step: {step}, Score: {score}, Lives: {info["lives"]}")
+    print(f"Step: {steps}, Score: {score}, Lives: {info["lives"]}")
 
 env.close()
 
@@ -86,7 +86,7 @@ agent = DQNAgent(
 # Load pre-trained model if it exists
 if os.path.exists(file_path):
     agent.load_model(file_path, compile=True)
-    agent.policy.epsilon = 1.0  # Resume with less exploration
+    agent.policy.epsilon = 0.1  # Resume with less exploration
 
 agent.model.summary()
 
@@ -102,29 +102,34 @@ num_episodes = 1_000_000  # Max number of training episodes
 max_score = 400  # max score to stop training
 
 for episode in range(num_episodes):
-    frame, _ = env.reset()
+    frame, info = env.reset()
     state = frame_stacker.reset(frame)
-
-    step, score, terminated = 0, 0, False
+    
+    prev_lives = info["lives"]
+    steps, score, terminated = 0, 0, False
     while not terminated:
         action = agent.act(state)
         frame, reward, done, trunc, info = env.step(action)
         next_state = frame_stacker.add_frame(frame)
-        clipped_reward = np.clip(reward, -1.0, +1.0)
 
+        done = done or info["lives"] < prev_lives
+        clipped_reward = np.clip(reward, -1.0, +1.0) if not done else -1.0
+        
         experience = Experience(state, action, next_state, clipped_reward, done)
         agent.add_experience(experience)
+        
         state = next_state
-
-        step += 1
+        steps += 1
         score += reward
         terminated = done or trunc
+        prev_lives = info["lives"]
 
-        if agent.memory.size > 1000 and step % 8 == 0:
+        if agent.memory.size > 10_000 and steps % 8 == 0:
             metrics = agent.train()
 
         if agent.train_steps > 0:
             print(
+                f"Steps: {steps}, Score: {score}, "
                 f"Train steps: {agent.train_steps}, "
                 f"Memory size: {agent.memory.size}, "
                 f"Epsilon: {agent.policy.epsilon:.4f}, "
@@ -132,9 +137,9 @@ for episode in range(num_episodes):
                 f"Accuracy: {metrics["accuracy"]*100:.2f} %"
             )
         else:
-            print(f"Episode: {episode+1}, Steps: {step}, Score: {score}")
+            print(f"Episode: {episode+1}, Steps: {steps}, Score: {score}")
 
-    print(f"➡️  Episode: {episode+1}, Steps: {step}, Score: {score}")
+    print(f"➡️  Episode: {episode+1}, Steps: {steps}, Score: {score}")
 
     if score >= max_score:
         print("Max score reached.")

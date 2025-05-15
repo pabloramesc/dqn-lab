@@ -55,7 +55,7 @@ model = create_model(state_shape, num_actions)
 file_path = file_path = os.path.join("saved_models", "dqn-model-breakout.keras")
 policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-6)
 memory = PriorityReplayBuffer(
-    max_size=250_000, alpha=0.6, beta=0.4, beta_annealing=0.0
+    max_size=250_000, alpha=0.6, beta=0.4, beta_annealing=1e-9
 )
 agent = DQNAgent(
     model,
@@ -73,7 +73,7 @@ agent = DQNAgent(
 # Load pre-trained model if it exists
 if os.path.exists(file_path):
     agent.load_model(file_path, compile=True)
-    agent.policy.epsilon = 1.0  # Resume with less exploration
+    agent.policy.epsilon = 0.1  # Resume with less exploration
 
 agent.model.summary()
 
@@ -89,26 +89,29 @@ frame_stacker = MultiEnvAtariFrameStacker(num_envs)
 envs = gym.make_vec("ALE/Breakout-v5", num_envs=num_envs, vectorization_mode="sync")
 
 num_episodes = 100_000_000  # Max number of training episodes
-max_score = 400  # max score to stop training
+max_score = 500  # max score to stop training
 
 frames, _ = envs.reset()
 states = frame_stacker.reset(frames)
-scores = np.zeros(num_envs)
+scores, prev_lives = np.zeros(num_envs), np.zeros(num_envs)
 while True:
     actions = agent.act_on_batch(states)
 
     frames, rewards, dones, truncs, infos = envs.step(actions)
+    
+    frame_stacker.reset_done_envs(frames, dones)
     next_states = frame_stacker.add_frames(frames)
-
-    clipped_rewards = np.clip(rewards, -1.0, +1.0)
-    batch = ExperiencesBatch(states, actions, next_states, clipped_rewards, dones)
+    
+    live_lost = dones | (prev_lives > infos["lives"])
+    clipped_rewards = np.where(live_lost, -1.0, np.clip(rewards, -1.0, +1.0))
+    
+    batch = ExperiencesBatch(states, actions, next_states, clipped_rewards, live_lost)
     agent.add_experiences_batch(batch)
 
     states = next_states
     scores = (scores + rewards) * (~dones)
+    prev_lives = infos["lives"]
     
-    frame_stacker.reset_done_envs(frames, dones)
-
     if agent.memory.size > 50_000:
         metrics = agent.train()
 
@@ -117,7 +120,7 @@ while True:
             f"Train steps: {agent.train_steps}, "
             f"Memory size: {agent.memory.size}, "
             f"Max score: {scores.max()}, "
-            f"Epsilon: {agent.policy.epsilon:.4f}, "
+            f"Epsilon: {policy.epsilon:.4f}, "
             f"Loss: {metrics["loss"]:.4e}, "
             f"Accuracy: {metrics["accuracy"]*100:.2f} %"
         )
@@ -125,7 +128,7 @@ while True:
         print(
             f"Memory size: {agent.memory.size}, "
             f"Max score: {scores.max()}, "
-            f"Epsilon: {agent.policy.epsilon:.4f}, "
+            f"Epsilon: {policy.epsilon:.4f}, "
         )
 
     if agent.train_steps > num_episodes or scores.max() > max_score:
