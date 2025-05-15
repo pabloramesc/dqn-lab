@@ -112,8 +112,8 @@ for episode in range(num_episodes):
         frame, reward, done, trunc, info = env.step(action)
         next_state = frame_stacker.add_frame(frame)
 
-        done = done or info["lives"] < prev_lives
-        clipped_reward = np.clip(reward, -1.0, +1.0) if not done else -1.0
+        live_lost = done or info["lives"] < prev_lives
+        clipped_reward = np.clip(reward, -1.0, +1.0) if not live_lost else -1.0
         
         experience = Experience(state, action, next_state, clipped_reward, done)
         agent.add_experience(experience)

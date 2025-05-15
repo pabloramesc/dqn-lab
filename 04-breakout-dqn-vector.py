@@ -105,7 +105,7 @@ while True:
     live_lost = dones | (prev_lives > infos["lives"])
     clipped_rewards = np.where(live_lost, -1.0, np.clip(rewards, -1.0, +1.0))
     
-    batch = ExperiencesBatch(states, actions, next_states, clipped_rewards, live_lost)
+    batch = ExperiencesBatch(states, actions, next_states, clipped_rewards, dones)
     agent.add_experiences_batch(batch)
 
     states = next_states
