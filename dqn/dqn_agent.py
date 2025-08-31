@@ -8,7 +8,7 @@ https://opensource.org/licenses/MIT
 import time
 
 import tensorflow as tf
-import keras.api as kr
+import keras as kr
 import numpy as np
 
 from dqn.exploration_policies import EpsilonGreedyPolicy, ExplorationPolicy
