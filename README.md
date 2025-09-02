@@ -1,45 +1,53 @@
 # dqn-lab
 
-A personal and educational deep reinforcement learning project in Python using TensorFlow and Keras. Includes a custom DQN agent library and 4 examples covering Q-Learning and DQN.
+A personal deep reinforcement learning project in Python using TensorFlow and Keras. Includes a custom DQN library and 4 examples demonstrating Q-Learning and DQN in various Gymnasium environments.
 
 ## Description
 
-The `dqn` module is a custom implementation of a Deep Q-Network (DQN) agent for reinforcement learning tasks. It includes utilities for experience replay, exploration policies, and Atari-specific preprocessing. This project is designed for educational purposes and demonstrates the application of reinforcement learning algorithms in various environments.
+The `dqn` package is a custom implementation of a Deep Q-Network (DQN) agent with utilities for:
+
+- Experience replay (uniform and prioritized)
+- Exploration policies (epsilon-greedy and boltzman)
+- Atari frame preprocessing and staking
 
 ## Examples
 
-### 1. Taxi-v3 Q-Learning (`01-taxi-qlearning.py`)
-A simple implementation of Q-Learning for the Taxi-v3 environment using NumPy. Demonstrates tabular Q-Learning with exploration and exploitation strategies.
+### 1. Taxi Q-Learning ([`examples/taxi-qlearning.py`](examples/taxi-qlearning.py))
 
-### 2. CartPole-v1 DQN (`02-carpole-dqn.py`)
-A DQN implementation for the CartPole-v1 environment using TensorFlow/Keras. Includes a simple feedforward neural network and experience replay.
+Classic tabular Q-Learning for Taxi-v3 using NumPy.
 
-### 3. Breakout DQN (`03-breakout-dqn.py`)
-A DQN agent trained to play Atari Breakout. Uses convolutional neural networks, frame stacking, and experience replay.
+### 2. CartPole DQN ([`examples/carpole-dqn.py`](examples/carpole-dqn.py))
 
-### 4. Breakout DQN with Vectorized Environments (`04-breakout-dqn-vector.py`)
-An advanced DQN implementation for Atari Breakout using vectorized environments to speed up training. Includes prioritized experience replay and parallel environment execution.
+DQN for CartPole-v1 using TensorFlow and Keras. Includes a simple feedforward neural network and experience replay.
+
+### 3. Breakout DQN ([`examples/breakout-dqn.py`](examples/breakout-dqn.py))
+
+DQN agent for Atari Breakout, based on the original Google DeepMind model. Uses convolutional neural networks (CNN), frame stacking, and experience replay.
+
+### 4. Breakout DQN with vectorized environments ([`examples/breakout-dqn-vector.py`](examples/breakout-dqn-vector.py))
+
+Advanced DQN for Atari Breakout using prioritized experience replay (PER) and vectorized environments to speed up training.
 
 ## Installation
 
-To install the `dqn` module, clone this repository and run the following command in the root directory:
+Clone the repository and install the `dqn` package and its dependencies:
 
 ```bash
-pip install .
+git clone https://github.com/pabloramesc/dqn-lab.git
+cd dqn-lab
+pip install -e .
+pip install -r requirements.txt
 ```
-
-This will install the `dqn` module along with its dependencies specified in `requirements.txt`.
 
 ## Running Examples
 
-Each example script can be run directly from the command line. For example:
-
+Run any example script from the project root:
 ```bash
-python 01-taxi-qlearning.py
+python examples/taxi-qlearning.py
 ```
 
-Ensure that the required dependencies are installed and that the `dqn` module is properly installed before running the examples.
+Make sure `dqn` package and all dependencies in `requirements.txt` are installed.
 
 ## License
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This project is licensed under the MIT License. See the [`LICENSE`](LICENSE) file for details.

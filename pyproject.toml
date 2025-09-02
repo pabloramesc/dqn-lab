@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=65.5.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dqn"
+version = "0.1.0"
+description = "A Deep Q-Network (DQN) module for reinforcement learning."
+readme = "README.md"
+requires-python = ">=3.12"
+authors = [
+    { name = "Pablo Ramirez", email = "ramirez.escudero.pablo@gmail.com" }
+]
+license = "MIT"
+license-files = ["LICENSE"]
+urls = { "Homepage" = "https://github.com/pabloramesc/dqn-lab" }
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dqn*"]
+exclude = ["saved_models*"]
