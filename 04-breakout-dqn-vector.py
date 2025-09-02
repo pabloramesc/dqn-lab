@@ -1,15 +1,15 @@
-# %% [markdown]
-# # 🎮 DQN for Atari Breakout - Vectorized Version 🧠🚀
-# We train a DQN agent to play the classic Atari *Breakout*, using **vectorized environments** with `gymnasium` to collect experiences in parallel and **speed up training**.
+# %%
+# 🕹️ DQN for Atari Breakout - Vectorized Version 🧠🚀
 
 
 # %%
-# ## 📦 Imports & Environment registration
+# 📦 Import modules and setup environment
 import os
-import numpy as np
-import keras.api as kr
-import gymnasium as gym
+
 import ale_py
+import gymnasium as gym
+import keras as kr
+import numpy as np
 
 # Ensure ALE environments are registered
 gym.register_envs(ale_py)
@@ -42,7 +42,7 @@ def create_model(state_shape: tuple, num_actions: int) -> kr.Model:
 
 
 # %%
-# 🤖 Configure the DQN agent + prioritized replay buffer
+# 🤖 Configure the DQN agent with PER (Prioritized Replay Buffer)
 from dqn import DQNAgent, EpsilonGreedyPolicy, ExperiencesBatch, PriorityReplayBuffer
 
 # Env settings
@@ -85,7 +85,7 @@ num_envs = 16  # 🚀 Run 16 parallel environments
 frame_stacker = MultiEnvAtariFrameStacker(num_envs)
 
 # %%
-# 🎓 Training using vectorized envs (faster ⚡)
+# 💪 Training using vectorized environments (faster ⚡)
 envs = gym.make_vec("ALE/Breakout-v5", num_envs=num_envs, vectorization_mode="sync")
 
 num_episodes = 100_000_000  # Max number of training episodes
@@ -98,20 +98,20 @@ while True:
     actions = agent.act_on_batch(states)
 
     frames, rewards, dones, truncs, infos = envs.step(actions)
-    
+
     frame_stacker.reset_done_envs(frames, dones)
     next_states = frame_stacker.add_frames(frames)
-    
+
     live_lost = dones | (prev_lives > infos["lives"])
     clipped_rewards = np.where(live_lost, -1.0, np.clip(rewards, -1.0, +1.0))
-    
+
     batch = ExperiencesBatch(states, actions, next_states, clipped_rewards, dones)
     agent.add_experiences_batch(batch)
 
     states = next_states
     scores = (scores + rewards) * (~dones)
     prev_lives = infos["lives"]
-    
+
     if agent.memory.size > 50_000:
         metrics = agent.train()
 
@@ -168,4 +168,4 @@ while not terminated:
 
 env.close()
 
-# %%
+# %% Run all cells above

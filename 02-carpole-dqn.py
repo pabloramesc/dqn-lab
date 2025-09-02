@@ -1,14 +1,15 @@
 # %%
-# 🏃‍♂️ DQN for CartPole-v1
-# A simple implementation using TensorFlow/Keras and OpenAI Gym
+# 🛒 DQN for CartPole-v1
 
-import gym
-import keras.api as kr
 import os
+
+import gymnasium as gym
+import keras as kr
+
 from dqn import DQNAgent, EpsilonGreedyPolicy, Experience
 
 # %%
-# 🎮 Random Environment Test
+# 🎮 Environment demo with random actions
 
 env = gym.make("CartPole-v1", render_mode="human")
 
@@ -36,7 +37,7 @@ env.close()
 
 
 # %%
-# 🎮 DQN Model Definition
+# 🧠 DQN model definition
 
 
 def create_model(state_shape: tuple, num_actions: int) -> kr.Model:
@@ -80,7 +81,7 @@ agent.model.summary()
 
 
 # %%
-# 🧠 Training Loop
+# 💪 Training loop
 
 num_episodes = 10_000  # Max number of training episodes
 for episode in range(num_episodes):
@@ -102,7 +103,7 @@ for episode in range(num_episodes):
         # Train when enough experiences in buffer and each few steps
         if agent.memory.size > 100 and step % 8 == 0:
             metrics = agent.train()
-            
+
         if agent.train_steps > 0:
             print(
                 f"Train steps: {agent.train_steps}, "
@@ -149,4 +150,4 @@ for episode in range(5):  # Test for 5 episodes
 
 env.close()
 
-# %%
+# %% Run all cells above

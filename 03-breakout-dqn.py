@@ -1,20 +1,20 @@
-# %% [markdown]
-# # 🎮 DQN Agent for Atari Breakout
-# A Deep Q-Network agent implemented with TensorFlow and Keras, trained to play Breakout using frame stacking and experience replay.
+# %%
+# 🕹️ DQN Agent for Atari Breakout
 
 # %%
-# 📦 Imports and Environment Setup
+# 📦 Import modules and setup environment
 import os
-import numpy as np
-import keras.api as kr
-import gymnasium as gym
+
 import ale_py
+import gymnasium as gym
+import keras as kr
+import numpy as np
 
 # Ensure ALE environments are registered
 gym.register_envs(ale_py)
 
 # %%
-# Test enviroment with random agent
+# 🎮 Test enviroment with random agent
 env = gym.make("ALE/Breakout-v5", render_mode="human")
 env.reset()
 
@@ -34,7 +34,7 @@ env.close()
 
 
 # %%
-# 🧠 Define the DQN Model
+# 🧠 Define the DQN model
 
 
 def create_model(state_shape: tuple, num_actions: int) -> kr.Model:
@@ -61,7 +61,7 @@ def create_model(state_shape: tuple, num_actions: int) -> kr.Model:
 
 
 # %%
-# 🤖 Initialize the DQN Agent
+# 🤖 Initialize the DQN agent
 from dqn import DQNAgent, EpsilonGreedyPolicy, Experience
 
 env = gym.make("ALE/Breakout-v5")
@@ -96,15 +96,15 @@ from dqn.atari_utils import AtariFrameStacker
 frame_stacker = AtariFrameStacker()
 
 # %%
-# 🚀 Train the Agent
+# 💪 Train the agent
 
 num_episodes = 1_000_000  # Max number of training episodes
-max_score = 400  # max score to stop training
+max_score = 400  # Max score to stop training
 
 for episode in range(num_episodes):
     frame, info = env.reset()
     state = frame_stacker.reset(frame)
-    
+
     prev_lives = info["lives"]
     steps, score, terminated = 0, 0, False
     while not terminated:
@@ -114,10 +114,10 @@ for episode in range(num_episodes):
 
         live_lost = done or info["lives"] < prev_lives
         clipped_reward = np.clip(reward, -1.0, +1.0) if not live_lost else -1.0
-        
+
         experience = Experience(state, action, next_state, clipped_reward, done)
         agent.add_experience(experience)
-        
+
         state = next_state
         steps += 1
         score += reward
@@ -181,4 +181,4 @@ while not terminated:
 
 env.close()
 
-# %%
+# %% Run all cells above

@@ -1,12 +1,11 @@
 # %%
 # 🚕 Q-Learning for Taxi-v3
-# A simple implementation using NumPy and OpenAI Gym
 
+import gymnasium as gym
 import numpy as np
-import gym
 
 # %%
-# 📦 Environment and Hyperparameters
+# ⚙️ Environment configuration and hyperparameters
 
 env = gym.make("Taxi-v3")
 
@@ -40,7 +39,7 @@ def update_q_table(state, action, reward, next_state):
 
 
 # %%
-# 🧠 Training loop
+# 💪 Training loop
 
 for episode in range(num_episodes):
     state, _ = env.reset()
@@ -91,4 +90,4 @@ for episode in range(5):
 
 env.close()
 
-# %%
+# %% Run all cells above
