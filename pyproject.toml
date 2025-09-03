@@ -18,4 +18,4 @@ urls = { "Homepage" = "https://github.com/pabloramesc/dqn-lab" }
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["dqn*"]
-exclude = ["saved_models*"]
+exclude = ["models*"]

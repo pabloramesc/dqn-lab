@@ -1,109 +1,94 @@
-"""
-Copyright (c) 2025 Pablo Ramirez Escudero
-
-This software is released under the MIT License.
-https://opensource.org/licenses/MIT
-"""
-
-from dataclasses import dataclass
-
 import numpy as np
 
 
-@dataclass
 class Experience:
-    """
-    A class representing a single experience in a DQN agent training.
-    """
+    """A class representing a single experience in a DQN agent training."""
 
-    state: np.ndarray
-    action: int
-    next_state: np.ndarray
-    reward: float
-    done: bool
+    def __init__(
+        self,
+        state: np.ndarray,
+        action: int,
+        next_state: np.ndarray,
+        reward: float,
+        done: bool,
+    ):
+        self.state = np.asarray(state)
+        self.next_state = np.asarray(next_state)
+        self.action = int(action)
+        self.reward = float(reward)
+        self.done = bool(done)
+        self._check_consistency()
 
     def to_tuple(self) -> tuple[np.ndarray, int, np.ndarray, float, bool]:
-        """
-        Convert the experience into a tuple format.
-
-        Returns
-        -------
-        tuple
-            A tuple containing (state, action, next_state, reward, done).
-        """
+        """Convert the experience into a tuple format."""
         return (self.state, self.action, self.next_state, self.reward, self.done)
 
+    def _check_consistency(self):
+        if self.state.shape != self.next_state.shape:
+            raise ValueError("State and next state must have same shape.")
+        if self.state.dtype != self.next_state.dtype:
+            raise ValueError("State and next state must have same data type.")
 
-@dataclass
+
 class ExperiencesBatch:
-    """
-    A class representing a batch of experiences, typically used for training.
-    """
+    """A class representing a batch of experiences, typically used for training."""
 
-    states: np.ndarray
-    actions: np.ndarray
-    next_states: np.ndarray
-    rewards: np.ndarray
-    dones: np.ndarray
-    indices: np.ndarray = None
-    weights: np.ndarray = None
+    def __init__(
+        self,
+        states: np.ndarray,
+        actions: np.ndarray,
+        next_states: np.ndarray,
+        rewards: np.ndarray,
+        dones: np.ndarray,
+        indices: np.ndarray = None,
+        weights: np.ndarray = None,
+    ):
+        self.states = np.asarray(states)
+        self.next_states = np.asarray(next_states)
+        self.actions = np.asarray(actions, dtype=np.int32)
+        self.rewards = np.asarray(rewards, dtype=np.float32)
+        self.dones = np.asarray(dones, dtype=np.bool_)
+        self.indices = (
+            np.asarray(indices, dtype=np.int32) if indices is not None else None
+        )
+        self.weights = (
+            np.asarray(weights, dtype=np.float32) if weights is not None else None
+        )
+        self._check_consistency()
 
     @property
     def size(self) -> int:
-        """
-        The number of experiences in the batch, after checking consistency.
-        """
-        return self._check_consistency()
+        """Number of experiences in the batch."""
+        return self.states.shape[0]
 
     def to_experiences(self) -> list[Experience]:
-        """
-        Convert the batch to a list of `Experience` objects.
-
-        Returns
-        -------
-        list
-            A list of `Experience` objects.
-        """
-        size = self._check_consistency()
-        experiences = [None] * size
-        for i in range(size):
-            experiences[i] = Experience(
+        """Convert the batch to a list of `Experience` objects."""
+        experiences = [
+            Experience(
                 state=self.states[i],
                 action=self.actions[i],
                 next_state=self.next_states[i],
                 reward=self.rewards[i],
                 done=self.dones[i],
             )
+            for i in range(self.size)
+        ]
         return experiences
 
-    def _check_consistency(self) -> int:
-        """
-        Ensure all arrays in the batch have consistent shapes and sizes.
-        """
+    def _check_consistency(self):
         if self.states.shape != self.next_states.shape:
-            raise ValueError("States and next states shapes must be equal")
+            raise ValueError("States and next states must have same shape.")
+        if self.states.dtype != self.next_states.dtype:
+            raise ValueError("States and next states must have same dtype.")
 
-        size = self.states.shape[0]
+        arrays_1d = {
+            "Actions": self.actions,
+            "Rewards": self.rewards,
+            "Dones": self.dones,
+            "Indices": self.indices,
+            "Weights": self.weights,
+        }
 
-        if self.actions.ndim > 1 or self.actions.shape[0] != size:
-            raise ValueError(f"Actions must be a 1D array of size {size}")
-
-        if self.rewards.ndim > 1 or self.rewards.shape[0] != size:
-            raise ValueError(f"Rewards must be a 1D array of size {size}")
-
-        if self.dones.ndim > 1 or self.dones.shape[0] != size:
-            raise ValueError(f"Dones must be a 1D array of size {size}")
-
-        if self.indices is None:
-            return size
-
-        if self.indices.ndim > 1 or self.indices.shape[0] != size:
-            raise ValueError(f"Indices must be a 1D array of size {size}")
-
-        if self.weights is None:
-            return size
-
-        if self.weights.ndim > 1 or self.weights.shape[0] != size:
-            raise ValueError(f"Weights must be a 1D array of size {size}")
-
-        return size
+        for name, arr in arrays_1d.items():
+            if arr is not None and arr.shape != (self.size,):
+                raise ValueError(f"{name} must be a 1D array of size {self.size}.")

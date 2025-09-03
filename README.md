@@ -20,13 +20,13 @@ Classic tabular Q-Learning for Taxi-v3 using NumPy.
 
 DQN for CartPole-v1 using TensorFlow and Keras. Includes a simple feedforward neural network and experience replay.
 
-### 3. Breakout DQN ([`examples/breakout-dqn.py`](examples/breakout-dqn.py))
+### 3. Breakout DQN - Google DeeMind-style ([`examples/breakout-deepmind-dqn.py`](examples/breakout-deepmind-dqn.py))
 
-DQN agent for Atari Breakout, based on the original Google DeepMind model. Uses convolutional neural networks (CNN), frame stacking, and experience replay.
+DQN agent for Atari Breakout, based on the original Google DeepMind model. Uses convolutional neural networks (CNN), frame stacking, and experience replay for stable learning.
 
-### 4. Breakout DQN with vectorized environments ([`examples/breakout-dqn-vector.py`](examples/breakout-dqn-vector.py))
+### 4. Breakout DQN - Advanced ([`examples/breakout-advanced-dqn.py`](examples/breakout-advanced-dqn.py))
 
-Advanced DQN for Atari Breakout using prioritized experience replay (PER) and vectorized environments to speed up training.
+Advanced DQN agent for Breakout using VGG-style CNN, dueling Q-networks, prioritized experience replay (PER), and vectorized environments to speed up training.
 
 ## Installation
 
@@ -47,6 +47,8 @@ python examples/taxi-qlearning.py
 ```
 
 Make sure `dqn` package and all dependencies in `requirements.txt` are installed.
+
+*Note: To avoid using pre-trained models, delete or move the corresponding model files in the [`model`](models/) folders.*
 
 ## License
 

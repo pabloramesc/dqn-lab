@@ -4,9 +4,8 @@
 import os
 
 import gymnasium as gym
-import keras as kr
+import keras
 
-from dqn import DQNAgent, EpsilonGreedyPolicy, Experience
 
 # %%
 # 🎮 Environment demo with random actions
@@ -17,7 +16,7 @@ for episode in range(5):
     state, _ = env.reset()  # Reset environment and get initial state
 
     score = 0
-    for step in range(100):
+    for steps in range(100):
         env.render()  # Render the environment
 
         # Choose random action for testing
@@ -29,7 +28,7 @@ for episode in range(5):
 
         if done or trunc:
             print(
-                f"Episode: {episode+1} finished after {step+1} steps with score {score}"
+                f"Episode: {episode+1} finished after {steps+1} steps with score {score}"
             )
             break
 
@@ -37,15 +36,17 @@ env.close()
 
 
 # %%
-# 🧠 DQN model definition
+# 🧠 DQN model and agent definition
+from keras.models import Model, Sequential
+from keras.layers import Dense
 
 
-def create_model(state_shape: tuple, num_actions: int) -> kr.Model:
-    model = kr.models.Sequential()
-    model.add(kr.layers.Dense(24, activation="relu", input_shape=state_shape))
-    model.add(kr.layers.Dense(24, activation="relu"))
-    model.add(kr.layers.Dense(num_actions, activation="linear"))
-    model.compile(loss="mse", optimizer="adam", metrics=["accuracy"])
+def create_model(state_shape: tuple, num_actions: int) -> Model:
+    model = Sequential()
+    model.add(Dense(24, activation="relu", input_shape=state_shape))
+    model.add(Dense(24, activation="relu"))
+    model.add(Dense(num_actions, activation="linear"))
+    model.compile(loss="mse", optimizer="adam")
     return model
 
 
@@ -54,40 +55,42 @@ env = gym.make("CartPole-v1")
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n
 
-# Create DQN agent
-file_path = os.path.join("saved_models", "dqn-model-cartpole.keras")
+# Create the DQN agent
+from dqn import DQNAgent, EpsilonGreedyPolicy, Experience
+
 model = create_model(state_shape, num_actions)
 policy = EpsilonGreedyPolicy(
     decay_type="exponential", epsilon_min=0.01, epsilon_decay=0.9995
 )
 agent = DQNAgent(
-    model,
+    model=model,
     batch_size=32,
+    memory_size=100_000,
     gamma=0.95,
     policy=policy,
-    memory_size=100_000,
-    update_steps=100,
-    autosave_steps=100,
-    file_name=file_path,
-    verbose=True,
+    update_freq=1000,
 )
 
-# Load model if it exists
-if os.path.exists(file_path):
-    agent.load_model(file_path, compile=True)
-    agent.policy.epsilon = 0.1
+# Load pre-trained model if it exists
+model_path = "models/cartpole-model.keras"
 
-agent.model.summary()
+if os.path.exists(model_path):
+    model = keras.models.load_model(filepath=model_path, compile=True)
+    agent.set_model(model)
+    agent.policy.epsilon = 0.1  # Resume with less exploration
+    print(f"➡️  Model loaded from '{model_path}'.")
+
+model.summary()
 
 
 # %%
 # 💪 Training loop
 
-num_episodes = 10_000  # Max number of training episodes
-for episode in range(num_episodes):
+max_episodes = 10_000  # Max number of training episodes
+for episode in range(max_episodes):
     state, _ = env.reset()  # Reset environment and get initial state
 
-    step, score, terminated = 0, 0, False
+    steps, score, terminated = 0, 0, False
     while not terminated:
         action = agent.act(state)  # Choose action based on policy
         new_state, reward, done, trunc, info = env.step(action)
@@ -96,26 +99,30 @@ for episode in range(num_episodes):
         agent.add_experience(exp)
         state = new_state
 
-        step += 1
+        steps += 1
         score += reward
         terminated = done or trunc
 
         # Train when enough experiences in buffer and each few steps
-        if agent.memory.size > 100 and step % 8 == 0:
+        if agent.memory.size > 1000 and steps % 8 == 0:
             metrics = agent.train()
+
+        print(
+            f"Episode: {episode+1}, Steps: {steps}, Score: {score}, "
+            f"Memory size: {agent.memory.size}, "
+            f"Epsilon: {agent.policy.epsilon:.4f}",
+            end="",
+        )
 
         if agent.train_steps > 0:
             print(
-                f"Train steps: {agent.train_steps}, "
-                f"Memory size: {agent.memory.size}, "
-                f"Epsilon: {agent.policy.epsilon:.4f}, "
-                f"Loss: {metrics["loss"]:.4e}, "
-                f"Accuracy: {metrics["accuracy"]*100:.2f} %"
+                f", Train steps: {agent.train_steps}, Loss: {metrics["loss"]:.4e}",
+                end="\r",
             )
         else:
-            print(f"Episode: {episode+1}, Steps: {step}, Score: {score}")
+            print(end="\r")
 
-    print(f"➡️  Episode: {episode+1}, Steps: {step+1}, Score: {score}")
+    print()
 
     if trunc:
         print("Game truncated at max score/steps.")
@@ -124,27 +131,37 @@ for episode in range(num_episodes):
 print("✅ Training completed.")
 env.close()
 
+# Save the model
+agent.model.save(filepath=model_path)
+print(f"💾 Model saved to '{model_path}'.")
+
+
 # %%
 # 🧪 Test the trained agent
 env = gym.make("CartPole-v1", render_mode="human")  # Create environment for testing
 
+# Set exploration to zero for evaluation
+agent.policy.decay_type = "fixed"
+agent.policy.epsilon = 0.0
+
 for episode in range(5):  # Test for 5 episodes
     state, _ = env.reset()  # Reset environment and get initial state
 
-    step, score, terminated = 0, 0, False
+    steps, score, terminated = 0, 0, False
     while not terminated:
         env.render()
 
         action = agent.act(state)
         new_state, reward, done, trunc, info = env.step(action)
-
         state = new_state
+
+        steps += 1
         score += reward
         terminated = done or trunc
 
         if terminated:
             print(
-                f"Episode: {episode+1} finished after {step+1} steps with score {score}"
+                f"Episode: {episode+1} finished after {steps+1} steps with score {score}"
             )
             break
 
