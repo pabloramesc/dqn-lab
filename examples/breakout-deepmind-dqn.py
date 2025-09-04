@@ -75,7 +75,7 @@ num_actions = env.action_space.n
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)
-policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-6)
+policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-5)
 agent = DQNAgent(
     model=model,
     batch_size=32,
@@ -130,7 +130,7 @@ for episode in range(max_episodes):
         terminated = done or trunc
         prev_lives = info["lives"]
 
-        if agent.memory.size > 1000 and steps % 8 == 0:
+        if agent.memory.size > 1000 and steps % 4 == 0:
             metrics = agent.train()
 
         print(
@@ -150,7 +150,7 @@ for episode in range(max_episodes):
 
     print()
 
-    # Save model after each episode
+    # Save the model after each episode
     agent.model.save(filepath=model_path)
 
     if score >= max_score:
