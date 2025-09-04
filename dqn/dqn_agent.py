@@ -116,7 +116,7 @@ class DQNAgent:
 
     def train(self) -> dict | None:
         """Performs a single training step if enough experiences are available,
-        and update target network based on the update frequency.
+        and update target network based on the update frequency. Increments train steps counter.
 
         Returns:
             Dictionary of training metrics from the model, or None if
