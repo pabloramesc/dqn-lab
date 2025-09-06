@@ -1,3 +1,4 @@
 from .frame_processing import process_atari_frame
 from .frame_stacker import AtariFrameStacker
 from .multienv_stacker import MultiEnvAtariFrameStacker
+from .atari_trainer import AtariTrainer

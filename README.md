@@ -9,6 +9,8 @@ The `dqn` package is a custom implementation of a Deep Q-Network (DQN) agent wit
 - Experience replay (uniform and prioritized)
 - Exploration policies (epsilon-greedy and boltzman)
 - Atari frame preprocessing and staking
+- **Optimized DQN operations using TensorFlow compiled function**: experiences are fetched from replay buffer in RAM, while processing, mini-batch formation and training is perform on GPU.
+*Requires GPU with CUDA support and proper NVIDIA drivers. Follow this guide for installing TensorFlow with CUDA: https://www.tensorflow.org/install/pip*
 
 ## Examples
 
@@ -18,11 +20,19 @@ Classic tabular Q-Learning for Taxi-v3 using NumPy.
 
 ### 2. CartPole DQN ([`examples/carpole-dqn.py`](examples/carpole-dqn.py))
 
-DQN for CartPole-v1 using TensorFlow and Keras. Includes a simple feedforward neural network and experience replay.
+DQN for CartPole-v1 using TensorFlow and Keras.
+- Uses a simple feedforward neural network to approximate Q-values.
+- Utilizes [`DQNAgent`](dqn/dqn_agent.py) class with an [esilon-greedy](dqn/policies/epsilon_greedy.py)
+policy.
+- Implements experience replay through [`ReplayBuffer`](dqn/buffers/replay_buffer.py) class for stable learning.
+- Contains raw step-by-step DQN training loop.
 
 ### 3. Breakout DQN - Google DeeMind-style ([`examples/breakout-deepmind-dqn.py`](examples/breakout-deepmind-dqn.py))
 
-DQN agent for Atari Breakout, based on the original Google DeepMind model. Uses convolutional neural networks (CNN), frame stacking, and experience replay for stable learning.
+DQN agent for Atari Breakout, based on the original Google DeepMind model.
+- Uses convolutional neural networks (CNNs) to process frames.
+- Implements frame stacking of 4 frames to capture movement.
+- Integrates the [`AtariTrainer`](dqn/atari_utils/atari_trainer.py) class to abstract training and testing loops.
 
 ### 4. Breakout DQN - Advanced ([`examples/breakout-advanced-dqn.py`](examples/breakout-advanced-dqn.py))
 
