@@ -98,7 +98,7 @@ class AtariTrainer:
                 ):
                     metrics = self.agent.train()
 
-                if verbose:
+                if verbose and terminated or steps % 10 == 0: # Log each 10 steps
                     msg = (
                         f"Episode: {episode+1}, Steps: {steps}, Score: {score}, "
                         f"Lives: {info['lives']}, Memory: {self.agent.memory.size}, "
