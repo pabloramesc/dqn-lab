@@ -5,7 +5,9 @@ from dqn.policies import EpsilonGreedyPolicy
 
 
 def test_initialization():
-    policy = EpsilonGreedyPolicy(epsilon=0.5, epsilon_min=0.1, epsilon_decay=0.01, decay_type="linear")
+    policy = EpsilonGreedyPolicy(
+        epsilon=0.5, epsilon_min=0.1, epsilon_decay=0.01, decay_type="linear"
+    )
     assert policy.epsilon == 0.5
     assert policy.epsilon_min == 0.1
     assert policy.epsilon_decay == 0.01
@@ -36,14 +38,18 @@ def test_select_action_batch_shape_and_values():
 
 
 def test_update_params_linear_decay():
-    policy = EpsilonGreedyPolicy(epsilon=1.0, epsilon_min=0.0, epsilon_decay=0.1, decay_type="linear")
+    policy = EpsilonGreedyPolicy(
+        epsilon=1.0, epsilon_min=0.0, epsilon_decay=0.1, decay_type="linear"
+    )
     policy.update_params(steps=5)
     expected = max(0.0, 1.0 - 0.1 * 5)
     assert policy.epsilon == expected
 
 
 def test_update_params_exponential_decay():
-    policy = EpsilonGreedyPolicy(epsilon=1.0, epsilon_min=0.0, epsilon_decay=0.9, decay_type="exponential")
+    policy = EpsilonGreedyPolicy(
+        epsilon=1.0, epsilon_min=0.0, epsilon_decay=0.9, decay_type="exponential"
+    )
     policy.update_params(steps=2)
     expected = max(0.0, 1.0 * 0.9**2)
     assert np.isclose(policy.epsilon, expected)
@@ -56,7 +62,7 @@ def test_update_params_fixed_decay_does_nothing():
 
 
 def test_update_params_invalid_decay_type_raises():
-    policy = EpsilonGreedyPolicy(epsilon=0.5, decay_type="invalid") # type: ignore
+    policy = EpsilonGreedyPolicy(epsilon=0.5, decay_type="invalid")  # type: ignore
     with pytest.raises(ValueError):
         policy.update_params()
 

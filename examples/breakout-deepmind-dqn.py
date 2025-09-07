@@ -65,7 +65,7 @@ agent = DQNAgent(
     model=model,
     batch_size=32,
     gamma=0.99,
-    memory_size=200_000,
+    memory_size=200_000,  # aprox. 5GB of RAM per 100k samples
     policy=policy,
     update_freq=10_000,
 )

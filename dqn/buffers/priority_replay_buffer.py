@@ -48,24 +48,25 @@ class PriorityReplayBuffer(ReplayBuffer):
         self.priorities[self.ptr] = priority
         self.ptr = (self.ptr + 1) % self.max_size
 
-    def add_batch(self, batch: ExperiencesBatch, td_errors: np.ndarray = None) -> None:
+    def add_batch(
+        self, batch: ExperiencesBatch, td_errors: np.ndarray | None = None
+    ) -> None:
         """Add a batch of experiences to the replay buffer.
 
         Args:
-            batch: A batch of experiences to be added to the buffer.
+            batch: A list of experiences to be added to the buffer.
             td_errors: The temporal difference errors for each experience.
         """
         super().add_batch(batch)
 
-        batch_size = len(batch)
         if td_errors is None:
-            priority = np.ones(batch_size, dtype=np.float32)
+            priority = np.ones(batch.size, dtype=np.float32)
         else:
             priority = np.clip(td_errors, a_min=self.min_priority, a_max=None)
 
-        indices = np.arange(self.ptr, self.ptr + batch_size) % self.max_size
+        indices = np.arange(self.ptr, self.ptr + batch.size) % self.max_size
         self.priorities[indices] = priority
-        self.ptr = (self.ptr + batch_size) % self.max_size
+        self.ptr = (self.ptr + batch.size) % self.max_size
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
         """Sample a batch of experiences from the replay buffer with priority sampling.

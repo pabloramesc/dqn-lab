@@ -25,13 +25,14 @@ class ReplayBuffer:
         """
         self.buffer.append(exp)
 
-    def add_batch(self, batch: list[Experience]) -> None:
+    def add_batch(self, batch: ExperiencesBatch) -> None:
         """Add a batch of experiences to the replay buffer.
 
         Args:
-            batch: A list of experiences to be added to the buffer.
+            batch: A batch of experiences to be added to the buffer.
         """
-        self.buffer.extend(batch)
+        experiences = batch.to_experiences()
+        self.buffer.extend(experiences)
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
         """Sample a batch of experiences from the buffer.

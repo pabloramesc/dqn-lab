@@ -1,10 +1,12 @@
+from typing import Optional
+
 import keras
 import numpy as np
 import tensorflow as tf
 
-from .policies import EpsilonGreedyPolicy, ExplorationPolicy
-from .experiences import Experience, ExperiencesBatch
 from .buffers import ReplayBuffer
+from .experiences import Experience, ExperiencesBatch
+from .policies import ExplorationPolicy
 
 
 class DQNAgent:
@@ -26,33 +28,32 @@ class DQNAgent:
     def __init__(
         self,
         model: keras.Model,
-        batch_size: int = 64,
-        memory_size: int = 10_000,
-        gamma: float = 0.95,
-        policy: ExplorationPolicy = None,
-        update_freq: int = 1000,
+        policy: ExplorationPolicy,
+        batch_size: int = 32,
+        memory_size: int = 100_000,
+        gamma: float = 0.99,
+        update_freq: int = 10_000,
     ) -> None:
         """Initializes the DQN agent.
 
         Args:
             model: Keras model used to approximate the Q-function.
+            policy: Exploration policy to use.
             batch_size: Number of experiences per training batch.
             memory_size: Maximum number of experiences to store in the replay buffer.
             gamma: Discount factor for future rewards.
-            policy: Exploration policy to use, defaults to epsilon-greedy.
             update_freq: Number of training steps between automatic target network updates.
         """
-        self.set_model(model)
-
         if memory_size < batch_size:
             raise ValueError(
                 f"Memory size ({memory_size}) must be greater than batch size ({batch_size})."
             )
 
+        self.set_model(model)
+        self.policy = policy
         self.batch_size = int(batch_size)
         self.memory = ReplayBuffer(memory_size)
         self.gamma = np.float32(gamma)
-        self.policy = policy or EpsilonGreedyPolicy()
         self.update_freq = int(update_freq)
 
         self.train_steps = int(0)
@@ -107,8 +108,7 @@ class DQNAgent:
         Args:
             batch: ExperiencesBatch containing multiple experiences.
         """
-        experiences = batch.to_experiences()
-        self.memory.add_batch(experiences)
+        self.memory.add_batch(batch)
 
     def update_target_model(self) -> None:
         """Updates the target network with the weights of the main model."""
@@ -129,7 +129,11 @@ class DQNAgent:
         metrics = self._train_interface(batch)
 
         self.train_steps += 1
-        if self.update_freq > 0 and self.train_steps % self.update_freq == 0:
+        if (
+            self.update_freq > 0
+            and self.train_steps > 0
+            and self.train_steps % self.update_freq == 0
+        ):
             self.update_target_model()
 
         self.policy.update_params()
@@ -138,7 +142,7 @@ class DQNAgent:
 
     def _train_interface(self, batch: ExperiencesBatch) -> dict:
         """Interface method to compute targets and perform train on batch."""
-        # q_values, td_errors = self.compute_targets(batch)
+        # q_values, td_errors = self._compute_targets(batch)
         q_values, td_errors = self._compute_targets_optimized(batch)
         metrics = self.model.train_on_batch(batch.states, q_values, return_dict=True)
         return metrics
@@ -173,7 +177,7 @@ class DQNAgent:
             batch.next_states,
             batch.rewards,
             batch.dones,
-        )
+        )  # type: ignore
         return q_values, td_errors
 
     @tf.function
@@ -188,10 +192,11 @@ class DQNAgent:
         q_values = self.model(states, training=False)
         q_next = self.target_model(next_states, training=False)
 
-        max_next_q = tf.reduce_max(q_next, axis=1)
-        q_target = rewards + self.gamma * max_next_q * tf.cast(~dones, dtype=np.float32)
+        max_q_next = tf.reduce_max(q_next, axis=1)
+        mask = tf.cast(tf.logical_not(dones), dtype=np.float32)
+        q_target = rewards + self.gamma * max_q_next * mask
 
-        indices = tf.range(tf.shape(actions)[0])
+        indices = tf.range(actions.shape[0])
         indices = tf.stack([indices, actions], axis=1)
 
         q_actual = tf.gather_nd(q_values, indices)
