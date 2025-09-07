@@ -4,46 +4,33 @@ from .frame_processing import process_atari_frame
 
 
 class AtariFrameStacker:
-    """
-    A class to process and stack frames for Atari environments.
-    """
+    """A class to process and stack frames for Atari environments."""
 
-    def __init__(self, stack_size=4) -> None:
-        """
-        Initializes the processor with a specified stack size.
+    def __init__(self, stack_size: int = 4) -> None:
+        """Initializes the processor with a specified stack size.
 
-        Parameters
-        ----------
-        stack_size : int
-            The number of frames to stack for the state representation.
+        Args:
+            stack_size: The number of frames to stack for the state representation.
         """
         self.stack_size = stack_size
-        self.frames = None
+        self.frames: list[np.ndarray] = []
 
     def get_stacked_frames(self) -> np.ndarray:
-        """
-        Returns the stacked frames as the current state.
+        """Returns the stacked frames as the current state.
 
-        Returns
-        -------
-        np.ndarray
+        Returns:
             The stacked frames in a single array.
         """
         return np.stack(self.frames, axis=-1)
 
     def reset(self, frame: np.ndarray) -> np.ndarray:
-        """
-        Resets the processor with the initial frame by processing it
-        and stacking it multiple times.
+        """Resets the processor with the initial frame by processing it and
+        stacking it multiple times.
 
-        Parameters
-        ----------
-        frame : np.ndarray
-            The initial Atari frame.
+        Args:
+            frame: The initial Atari frame.
 
-        Returns
-        -------
-        np.ndarray
+        Returns:
             The state after reset (stacked frames).
         """
         processed_frame = process_atari_frame(frame)
@@ -51,18 +38,13 @@ class AtariFrameStacker:
         return self.get_stacked_frames()
 
     def add_frame(self, frame: np.ndarray) -> np.ndarray:
-        """
-        Processes a new frame, adds it to the frame stack, and returns
-        the updated state.
+        """Processes a new frame, adds it to the frame stack,
+        and returns the updated state.
 
-        Parameters
-        ----------
-        frame : np.ndarray
-            The new Atari frame to be processed.
+        Args:
+            frame: The new Atari frame to be processed.
 
-        Returns
-        -------
-        np.ndarray
+        Returns:
             The updated state after adding the new frame to the stack.
         """
         if len(self.frames) != self.stack_size:

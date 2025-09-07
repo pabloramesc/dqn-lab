@@ -1,8 +1,9 @@
 import gymnasium as gym
 import numpy as np
-from typing import Tuple, Dict, Any
+from typing import Tuple, Dict, Any, Optional
 
-from dqn import DQNAgent, Experience
+from ..dqn_agent import DQNAgent
+from ..experiences import Experience
 
 from .frame_stacker import AtariFrameStacker
 
@@ -14,7 +15,7 @@ class AtariTrainer:
         self,
         env: gym.Env,
         agent: DQNAgent,
-        stack_frames: int = 4,
+        stack_frames: Optional[int] = 4,
     ):
         """Initialize the DQN agent wrapper for Atari environments.
 
@@ -50,9 +51,9 @@ class AtariTrainer:
         max_noop_steps: int = 30,
         min_memory_size: int = 10_000,
         train_after_steps: int = 4,
-        max_episode_steps: int = None,
-        max_score: float = None,
-        model_path: str = None,
+        max_episode_steps: Optional[int] = None,
+        max_score: Optional[float] = None,
+        model_path: Optional[str] = None,
         verbose: bool = True,
     ) -> None:
         """Train the DQN agent on the Atari environment.
@@ -73,6 +74,7 @@ class AtariTrainer:
 
             prev_lives = info["lives"]
             steps, score, terminated = 0, 0, False
+            metrics = None
             while not terminated:
                 action = self.agent.act(state)
                 frame, reward, done, trunc, info = self.env.step(action)
@@ -80,7 +82,8 @@ class AtariTrainer:
 
                 # Clip reward to max +1 and set to -1 if live was lost.
                 live_lost = done or info["lives"] < prev_lives
-                clipped_reward = np.clip(reward, -1.0, +1.0) if not live_lost else -1.0
+                reward = float(reward) if not live_lost else -1.0
+                clipped_reward = np.clip(reward, -1.0, +1.0)
 
                 self.agent.add_experience(
                     Experience(state, action, next_state, clipped_reward, done)
@@ -98,14 +101,22 @@ class AtariTrainer:
                 ):
                     metrics = self.agent.train()
 
-                if verbose and terminated or steps % 10 == 0: # Log each 10 steps
+                if verbose and terminated or steps % 10 == 0:  # Log each 10 steps
                     msg = (
                         f"Episode: {episode+1}, Steps: {steps}, Score: {score}, "
-                        f"Lives: {info['lives']}, Memory: {self.agent.memory.size}, "
-                        f"Epsilon: {self.agent.policy.epsilon:.4f}"
+                        f"Lives: {info['lives']}, Memory: {self.agent.memory.size}"
                     )
-                    if self.agent.train_steps > 0:
-                        msg += f", Train steps: {self.agent.train_steps}, Loss: {metrics['loss']:.4e}"
+
+                    epsilon = self.agent.policy.get_dynamic_params().get("epsilon")
+                    if epsilon is not None:
+                        msg += f", Epsilon: {epsilon:.4f}"
+
+                    if metrics is not None:
+                        loss = metrics.get("loss", np.nan)
+                        msg += (
+                            f", Train steps: {self.agent.train_steps}, Loss: {loss:.4e}"
+                        )
+
                     # Use carriage return to overwrite episode string
                     print(msg, end="\r")
 
@@ -129,8 +140,7 @@ class AtariTrainer:
         """Run one evaluation episode with epsilon=0.0."""
 
         # Set exploration to zero for evaluation
-        self.agent.policy.decay_type = "fixed"
-        self.agent.policy.epsilon = 0.0
+        self.agent.policy.set_full_exploitation()
 
         frame, _ = self.env.reset()
         state = self.frame_stacker.reset(frame)
@@ -145,7 +155,7 @@ class AtariTrainer:
             state = self.frame_stacker.add_frame(frame)
 
             steps += 1
-            score += reward
+            score += float(reward)
             terminated = done or trunc
 
             print(

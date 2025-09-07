@@ -15,10 +15,10 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 
     def __init__(
         self,
-        epsilon=1.0,
-        epsilon_min=0.01,
-        epsilon_decay=0.9999,
-        decay_type: Literal["exponential", "linear", "fixed"] = "exponential",
+        epsilon: float = 1.0,
+        epsilon_min: float = 0.0,
+        epsilon_decay: float = 1e-6,
+        decay_type: Literal["fixed", "linear", "exponential"] = "fixed",
     ) -> None:
         """Initializes the epsilon-greedy policy.
 
@@ -26,7 +26,7 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
             epsilon: The initial exploration probability.
             epsilon_min: The minimum value of epsilon.
             epsilon_decay: The decay factor for epsilon.
-            decay_type: The type of decay {'exponential', 'linear', 'fixed'}.
+            decay_type: The type of decay {'fixed', 'linear', 'exponential'}.
         """
         self.epsilon = epsilon
         self.epsilon_min = epsilon_min
@@ -38,7 +38,7 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
         if np.random.rand() <= self.epsilon:
             return np.random.choice(num_actions)
         action = np.argmax(q_values)
-        return action
+        return action.item()
 
     def select_action_batch(self, q_values: np.ndarray) -> np.ndarray:
         batch_size = q_values.shape[0]
@@ -54,17 +54,32 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 
     def update_params(self, steps: int = 1) -> None:
         super().update_params(steps)
-        if self.decay_type == "exponential":
-            self.epsilon = max(
-                self.epsilon_min, self.epsilon * self.epsilon_decay**steps
-            )
+
+        if self.decay_type == "fixed":
+            return  # No update for fixed epsilon
+
         elif self.decay_type == "linear":
             self.epsilon = max(
                 self.epsilon_min, self.epsilon - self.epsilon_decay * steps
             )
-        elif self.decay_type == "fixed":
-            return  # No update for fixed epsilon
-        else:
-            raise ValueError(
-                f"Not valid decay type '{self.decay_type}'. Valid types are 'exponential', 'linear' or 'fixed'."
+
+        elif self.decay_type == "exponential":
+            self.epsilon = max(
+                self.epsilon_min, self.epsilon * self.epsilon_decay**steps
             )
+
+        else:
+            raise ValueError(f"Not valid decay type '{self.decay_type}'.")
+
+    def get_dynamic_params(self) -> dict[str, float]:
+        return {"epsilon": self.epsilon}
+
+    def set_full_exploration(self) -> None:
+        """Force uniform random actions."""
+        self.decay_type = "fixed"
+        self.epsilon = 1.0
+
+    def set_full_exploitation(self) -> None:
+        """Force pure exploitation: greedy (argmax) selection."""
+        self.decay_type = "fixed"
+        self.epsilon = 0.0

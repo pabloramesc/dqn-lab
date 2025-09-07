@@ -1,14 +1,14 @@
 import numpy as np
-
+from numpy.typing import NDArray
 
 class Experience:
     """A class representing a single experience in a DQN agent training."""
 
     def __init__(
         self,
-        state: np.ndarray,
+        state: NDArray,
         action: int,
-        next_state: np.ndarray,
+        next_state: NDArray,
         reward: float,
         done: bool,
     ):
@@ -19,7 +19,7 @@ class Experience:
         self.done = bool(done)
         self._check_consistency()
 
-    def to_tuple(self) -> tuple[np.ndarray, int, np.ndarray, float, bool]:
+    def to_tuple(self) -> tuple[NDArray, int, NDArray, float, bool]:
         """Convert the experience into a tuple format."""
         return (self.state, self.action, self.next_state, self.reward, self.done)
 
@@ -35,13 +35,13 @@ class ExperiencesBatch:
 
     def __init__(
         self,
-        states: np.ndarray,
-        actions: np.ndarray,
-        next_states: np.ndarray,
-        rewards: np.ndarray,
-        dones: np.ndarray,
-        indices: np.ndarray = None,
-        weights: np.ndarray = None,
+        states: NDArray,
+        actions: NDArray[np.int32],
+        next_states: NDArray,
+        rewards: NDArray[np.float32],
+        dones: NDArray[np.bool_],
+        indices: NDArray[np.int32] | None = None,
+        weights: NDArray[np.float32] | None = None,
     ):
         self.states = np.asarray(states)
         self.next_states = np.asarray(next_states)
