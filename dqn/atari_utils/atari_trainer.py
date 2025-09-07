@@ -68,13 +68,13 @@ class AtariTrainer:
             model_path: If provided, save the trained model to this path after each episode.
             verbose: Whether to print training status string.
         """
+        metrics = None
         for episode in range(max_episodes):
             frame, info = self.reset_with_noops(max_noop_steps)
             state = self.frame_stacker.reset(frame)
 
             prev_lives = info["lives"]
             steps, score, terminated = 0, 0, False
-            metrics = None
             while not terminated:
                 action = self.agent.act(state)
                 frame, reward, done, trunc, info = self.env.step(action)
@@ -126,7 +126,7 @@ class AtariTrainer:
             if verbose:
                 print()  # New line to log end of episode string
 
-            if model_path is not None:
+            if model_path is not None:  # Save the model at the end of each episode
                 self.agent.model.save(filepath=model_path)
 
             if max_score is not None and score >= max_score:

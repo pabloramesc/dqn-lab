@@ -55,5 +55,5 @@ class ExplorationPolicy(ABC):
         return
     
     def set_full_exploitation(self) -> None:
-        """Force the polciy into pure exploitation mode (no exploration)."""
+        """Force the policy into pure exploitation mode (no exploration)."""
         return

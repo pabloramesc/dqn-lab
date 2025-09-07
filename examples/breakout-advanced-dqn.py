@@ -6,6 +6,7 @@
 # %%
 # 📦 Import modules and setup environment
 import os
+from typing import cast
 
 import ale_py
 import gymnasium as gym
@@ -55,7 +56,7 @@ def create_model(state_shape: tuple, num_actions: int) -> Model:
     q_values = DuelingHead()([value, advantage])
 
     model = Model(inputs=inputs, outputs=q_values)
-    model.compile(optimizer=Adam(learning_rate=0.00025), loss=Huber(delta=1.0))
+    model.compile(optimizer=Adam(learning_rate=0.00025), loss=Huber(delta=1.0))  # type: ignore
     return model
 
 
@@ -66,7 +67,7 @@ from dqn import DQNAgentPER, EpsilonGreedyPolicy, ExperiencesBatch
 # Env settings
 env = gym.make("ALE/Breakout-v5")
 state_shape = (84, 84, 4)
-num_actions = env.action_space.n
+num_actions = env.action_space.n  # type: ignore
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)
@@ -90,8 +91,9 @@ if os.path.exists(model_path):
     model = keras.models.load_model(
         filepath=model_path, custom_objects={"DuelingHead": DuelingHead}, compile=True
     )  # Use custom objects to deserialize DuelinHead custom layer
+    model = cast(Model, model)
     agent.set_model(model)
-    agent.policy.epsilon = 0.1  # Resume with less exploration
+    policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
 model.summary()
@@ -171,8 +173,8 @@ preprocessor = AtariFrameStacker()
 state = preprocessor.reset(frame)
 
 # Set exploration to zero for evaluation
-agent.policy.decay_type = "fixed"
-agent.policy.epsilon = 0.0
+policy.decay_type = "fixed"
+policy.epsilon = 0.0
 
 terminated, score, steps = False, 0, 0
 while not terminated:
@@ -183,7 +185,7 @@ while not terminated:
     state = preprocessor.add_frame(frame)
 
     steps += 1
-    score += reward
+    score += float(reward)
     terminated = done or trunc
 
     print(f"Steps: {steps}, Score: {score}, Lives: {info["lives"]}")

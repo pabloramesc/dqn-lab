@@ -4,6 +4,7 @@
 # %%
 # 📦 Import modules and setup environment
 import os
+from typing import cast
 
 import ale_py
 import gymnasium as gym
@@ -74,11 +75,12 @@ model_path = "models/breakout-deepmind-model.keras"
 
 if os.path.exists(model_path):
     model = keras.models.load_model(filepath=model_path, compile=True)
-    agent.set_model(model)  # type: ignore
+    model = cast(Model, model)
+    agent.set_model(model)
     policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
-model.summary()  # type: ignore
+model.summary()
 
 
 # %%
