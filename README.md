@@ -18,7 +18,7 @@ The `dqn` package is a custom implementation of a Deep Q-Network (DQN) agent wit
 
 Classic tabular Q-Learning for Taxi-v3 using NumPy.
 
-### 2. CartPole DQN ([`examples/carpole-dqn.py`](examples/carpole-dqn.py))
+### 2. CartPole DQN ([`examples/cartpole-dqn.py`](examples/cartpole-dqn.py))
 
 DQN for CartPole-v1 using TensorFlow and Keras.
 - Uses a simple feedforward neural network to approximate Q-values.

@@ -24,7 +24,7 @@ for episode in range(5):
         new_state, reward, done, trunc, info = env.step(action)
 
         state = new_state
-        score += reward
+        score += float(reward)
 
         if done or trunc:
             print(
@@ -41,7 +41,7 @@ from keras.models import Model, Sequential
 from keras.layers import Dense
 
 
-def create_model(state_shape: tuple, num_actions: int) -> Model:
+def create_model(state_shape: tuple[int, ...], num_actions: int) -> Model:
     model = Sequential()
     model.add(Dense(24, activation="relu", input_shape=state_shape))
     model.add(Dense(24, activation="relu"))
@@ -77,7 +77,7 @@ model_path = "models/cartpole-model.keras"
 if os.path.exists(model_path):
     model = keras.models.load_model(filepath=model_path, compile=True)
     agent.set_model(model)
-    agent.policy.epsilon = 0.1  # Resume with less exploration
+    policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
 model.summary()
@@ -87,6 +87,8 @@ model.summary()
 # 💪 Training loop
 
 max_episodes = 10_000  # Max number of training episodes
+
+metrics = None
 for episode in range(max_episodes):
     state, _ = env.reset()  # Reset environment and get initial state
 
@@ -110,11 +112,11 @@ for episode in range(max_episodes):
         print(
             f"Episode: {episode+1}, Steps: {steps}, Score: {score}, "
             f"Memory size: {agent.memory.size}, "
-            f"Epsilon: {agent.policy.epsilon:.4f}",
+            f"Epsilon: {policy.epsilon:.4f}",
             end="",
         )
 
-        if agent.train_steps > 0:
+        if metrics is not None:
             print(
                 f", Train steps: {agent.train_steps}, Loss: {metrics["loss"]:.4e}",
                 end="\r",
@@ -141,8 +143,8 @@ print(f"💾 Model saved to '{model_path}'.")
 env = gym.make("CartPole-v1", render_mode="human")  # Create environment for testing
 
 # Set exploration to zero for evaluation
-agent.policy.decay_type = "fixed"
-agent.policy.epsilon = 0.0
+policy.decay_type = "fixed"
+policy.epsilon = 0.0
 
 for episode in range(5):  # Test for 5 episodes
     state, _ = env.reset()  # Reset environment and get initial state
