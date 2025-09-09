@@ -3,9 +3,6 @@
 
 # %%
 # 📦 Import modules and setup environment
-import os
-from typing import cast
-
 import ale_py
 import gymnasium as gym
 import keras
@@ -20,6 +17,7 @@ from keras.models import Model, Sequential
 from keras.layers import Conv2D, Dense, Flatten, InputLayer, Rescaling
 from keras.optimizers import Adam
 from keras.losses import Huber
+
 
 # Ensure keras image format is (height, width, channels) <-- applies to Conv2D layers
 from keras.backend import set_image_data_format
@@ -42,7 +40,7 @@ def create_model(state_shape: tuple, num_actions: int) -> Model:
     )
 
     model.compile(
-        optimizer=Adam(learning_rate=0.00025, clipnorm=1.0),  # type: ignore
+        optimizer=Adam(learning_rate=0.00025, clipnorm=1.0),
         loss=Huber(delta=1.0),
     )
 
@@ -56,7 +54,7 @@ from dqn import DQNAgent, EpsilonGreedyPolicy
 # Initialize state and action space dimensions
 env = gym.make("ALE/Breakout-v5")
 state_shape = (84, 84, 4)
-num_actions = env.action_space.n  # type: ignore
+num_actions = env.action_space.n
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)
@@ -71,11 +69,12 @@ agent = DQNAgent(
 )
 
 # Load pre-trained model if it exists
+import os
+
 model_path = "models/breakout-deepmind-model.keras"
 
 if os.path.exists(model_path):
     model = keras.models.load_model(filepath=model_path, compile=True)
-    model = cast(Model, model)
     agent.set_model(model)
     policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")

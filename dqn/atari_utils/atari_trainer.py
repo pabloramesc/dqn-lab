@@ -81,9 +81,9 @@ class AtariTrainer:
                 next_state = self.frame_stacker.add_frame(frame)
 
                 # Clip reward to max +1 and set to -1 if live was lost.
+                reward = float(reward)
                 live_lost = done or info["lives"] < prev_lives
-                reward = float(reward) if not live_lost else -1.0
-                clipped_reward = np.clip(reward, -1.0, +1.0)
+                clipped_reward = np.clip(reward, -1.0, +1.0) if not live_lost else -1.0
 
                 self.agent.add_experience(
                     Experience(state, action, next_state, clipped_reward, done)
