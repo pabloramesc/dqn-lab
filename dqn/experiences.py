@@ -1,33 +1,36 @@
+from typing import NamedTuple, Sequence, Union, Optional
+
 import numpy as np
 from numpy.typing import NDArray
 
-class Experience:
+from .types import FloatArray, IntArray, BoolArray
+
+
+class Experience(NamedTuple):
     """A class representing a single experience in a DQN agent training."""
 
-    def __init__(
-        self,
-        state: NDArray,
-        action: int,
-        next_state: NDArray,
-        reward: float,
-        done: bool,
+    state: NDArray
+    action: int
+    next_state: NDArray
+    reward: float
+    done: bool
+
+    @classmethod
+    def create(
+        cls, state: NDArray, action: int, next_state: NDArray, reward: float, done: bool
     ):
-        self.state = np.asarray(state)
-        self.next_state = np.asarray(next_state)
-        self.action = int(action)
-        self.reward = float(reward)
-        self.done = bool(done)
-        self._check_consistency()
-
-    def to_tuple(self) -> tuple[NDArray, int, NDArray, float, bool]:
-        """Convert the experience into a tuple format."""
-        return (self.state, self.action, self.next_state, self.reward, self.done)
-
-    def _check_consistency(self):
-        if self.state.shape != self.next_state.shape:
+        """Factory method to enforce type conversion."""
+        if state.shape != next_state.shape:
             raise ValueError("State and next state must have same shape.")
-        if self.state.dtype != self.next_state.dtype:
+        if state.dtype != next_state.dtype:
             raise ValueError("State and next state must have same data type.")
+        return cls(
+            state=np.asarray(state),
+            action=int(action),
+            next_state=np.asarray(next_state),
+            reward=float(reward),
+            done=bool(done),
+        )
 
 
 class ExperiencesBatch:
@@ -36,16 +39,16 @@ class ExperiencesBatch:
     def __init__(
         self,
         states: NDArray,
-        actions: NDArray[np.int32],
+        actions: IntArray,
         next_states: NDArray,
-        rewards: NDArray[np.float32],
-        dones: NDArray[np.bool_],
-        indices: NDArray[np.int32] | None = None,
-        weights: NDArray[np.float32] | None = None,
+        rewards: FloatArray,
+        dones: BoolArray,
+        indices: Optional[IntArray] = None,
+        weights: Optional[FloatArray] = None,
     ):
         self.states = np.asarray(states)
-        self.next_states = np.asarray(next_states)
         self.actions = np.asarray(actions, dtype=np.int32)
+        self.next_states = np.asarray(next_states)
         self.rewards = np.asarray(rewards, dtype=np.float32)
         self.dones = np.asarray(dones, dtype=np.bool_)
         self.indices = (
@@ -64,7 +67,7 @@ class ExperiencesBatch:
     def to_experiences(self) -> list[Experience]:
         """Convert the batch to a list of `Experience` objects."""
         experiences = [
-            Experience(
+            Experience.create(
                 state=self.states[i],
                 action=self.actions[i],
                 next_state=self.next_states[i],
@@ -74,6 +77,14 @@ class ExperiencesBatch:
             for i in range(self.size)
         ]
         return experiences
+
+    @classmethod
+    def from_experiences(
+        cls, experiences: list[Experience], indices: Optional[IntArray] = None
+    ):
+        """Create an ExperiencesBatch from a list of Experience objects."""
+        states, actions, next_states, rewards, dones = zip(*experiences)
+        return cls(states, actions, next_states, rewards, dones, indices)  # type: ignore
 
     def _check_consistency(self):
         if self.states.shape != self.next_states.shape:

@@ -1,7 +1,7 @@
 import keras
 import numpy as np
 
-from .buffers import PriorityReplayBuffer
+from .buffers import PERBuffer
 from .dqn_agent import DQNAgent
 from .experiences import ExperiencesBatch
 from .policies import ExplorationPolicy
@@ -28,7 +28,7 @@ class DQNAgentPER(DQNAgent):
             gamma=gamma,
             update_freq=update_freq,
         )
-        self.memory = PriorityReplayBuffer(
+        self.memory = PERBuffer(
             max_size=memory_size,
             alpha=alpha,
             beta=beta,

@@ -41,9 +41,9 @@ class DQNAgent:
             self.set_model(model)
 
         self.memory = memory or ReplayBuffer(memory_size)
-        if self.memory.max_size < batch_size:
+        if self.memory._max_size < batch_size:
             raise ValueError(
-                f"Memory max size {self.memory.max_size} cannot be smaller than batch size {self.batch_size}"
+                f"Memory max size {self.memory._max_size} cannot be smaller than batch size {self.batch_size}"
             )
 
         self.batch_size = batch_size

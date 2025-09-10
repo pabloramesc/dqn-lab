@@ -4,7 +4,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 
-from .buffers import ReplayBuffer
+from .buffers import CircularBuffer
 from .experiences import Experience, ExperiencesBatch
 from .policies import ExplorationPolicy
 
@@ -52,7 +52,7 @@ class DQNAgent:
         self.set_model(model)
         self.policy = policy
         self.batch_size = int(batch_size)
-        self.memory = ReplayBuffer(memory_size)
+        self.memory = CircularBuffer(memory_size)
         self.gamma = np.float32(gamma)
         self.update_freq = int(update_freq)
 

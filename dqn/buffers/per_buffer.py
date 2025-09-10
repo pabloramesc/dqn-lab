@@ -1,10 +1,10 @@
 import numpy as np
 
 from ..experiences import Experience, ExperiencesBatch
-from .replay_buffer import ReplayBuffer
+from .circular_buffer import CircularBuffer
+from ..types import IntArray
 
-
-class PriorityReplayBuffer(ReplayBuffer):
+class PERBuffer:
     """A class representing a prioritized replay buffer for storing experiences
     with TD errors priority based sampling.
     """
@@ -26,15 +26,20 @@ class PriorityReplayBuffer(ReplayBuffer):
             beta_annealing: The rate at which beta increases over time.
             min_priority: The minimum priority value for experiences.
         """
-        super().__init__(max_size)
+        self.max_size = int(max_size)
         self.alpha = float(alpha)
         self.beta = float(beta)
         self.beta_annealing = float(beta_annealing)
         self.min_priority = float(min_priority)
 
         # Initialize priorities circular buffer
+        self.buffer = CircularBuffer(max_size=self.max_size)
         self.ptr = int(0)
         self.priorities = np.zeros(max_size, dtype=np.float32)
+        
+    @property
+    def size(self) -> int:
+        return self.buffer.size
 
     def add(self, exp: Experience, td_error: float = 1.0) -> None:
         """Add a single experience to the replay buffer.
@@ -43,7 +48,7 @@ class PriorityReplayBuffer(ReplayBuffer):
             exp: The experience to be added to the buffer.
             td_error: The temporal difference error for the experience.
         """
-        super().add(exp)
+        self.buffer.add(exp)
         priority = max(self.min_priority, td_error)
         self.priorities[self.ptr] = priority
         self.ptr = (self.ptr + 1) % self.max_size
@@ -57,7 +62,7 @@ class PriorityReplayBuffer(ReplayBuffer):
             batch: A list of experiences to be added to the buffer.
             td_errors: The temporal difference errors for each experience.
         """
-        super().add_batch(batch)
+        self.buffer.add_batch(batch)
 
         if td_errors is None:
             priority = np.ones(batch.size, dtype=np.float32)
@@ -67,6 +72,13 @@ class PriorityReplayBuffer(ReplayBuffer):
         indices = np.arange(self.ptr, self.ptr + batch.size) % self.max_size
         self.priorities[indices] = priority
         self.ptr = (self.ptr + batch.size) % self.max_size
+    
+    def get(self, index: int) -> Experience:
+        """Return the experience at the given logical index."""
+        return self.buffer.get(index)
+    
+    def get_batch(self, indices: IntArray) -> ExperiencesBatch:
+        return self.buffer.get_batch(indices)
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
         """Sample a batch of experiences from the replay buffer with priority sampling.
@@ -81,7 +93,7 @@ class PriorityReplayBuffer(ReplayBuffer):
         probabilities = priorities / np.sum(priorities)
 
         indices = np.random.choice(self.size, size=batch_size, p=probabilities)
-        batch = self._get_batch_by_indices(indices)
+        batch = self.buffer.get_batch(indices)
 
         weights = (self.size * probabilities[indices]) ** -self.beta
         batch.weights = weights / weights.max()

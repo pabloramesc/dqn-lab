@@ -1,9 +1,9 @@
 from collections import deque
-
+import random
 import numpy as np
 
 from ..experiences import Experience, ExperiencesBatch
-
+from ..types import IntArray
 
 class ReplayBuffer:
     """A class representing a basic replay buffer for storing experiences."""
@@ -14,8 +14,8 @@ class ReplayBuffer:
         Args:
             max_size: The maximum number of experiences to store in the buffer.
         """
-        self.max_size = int(max_size)
-        self.buffer: deque[Experience] = deque(maxlen=self.max_size)
+        self._max_size = int(max_size)
+        self._buffer: deque[Experience] = deque(maxlen=self._max_size)
 
     def add(self, exp: Experience) -> None:
         """Add a single experience to the replay buffer.
@@ -23,7 +23,7 @@ class ReplayBuffer:
         Args:
             exp: The experience to be added to the buffer.
         """
-        self.buffer.append(exp)
+        self._buffer.append(exp)
 
     def add_batch(self, batch: ExperiencesBatch) -> None:
         """Add a batch of experiences to the replay buffer.
@@ -32,7 +32,16 @@ class ReplayBuffer:
             batch: A batch of experiences to be added to the buffer.
         """
         experiences = batch.to_experiences()
-        self.buffer.extend(experiences)
+        self._buffer.extend(experiences)
+
+    def get(self, index: int) -> Experience:
+        """Return the experience at the given logical index."""
+        return self._buffer[index]
+
+    def get_batch(self, indices: IntArray) -> ExperiencesBatch:
+        experiences = [self._buffer[i] for i in indices]
+        batch = ExperiencesBatch.from_experiences(experiences, indices)
+        return batch
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
         """Sample a batch of experiences from the buffer.
@@ -43,29 +52,15 @@ class ReplayBuffer:
         Returns:
             A batch of sampled experiences.
         """
-        indices = np.random.choice(self.size, batch_size, replace=False)
-        batch = self._get_batch_by_indices(indices)
-        return batch
-
-    def _get_batch_by_indices(self, indices: np.ndarray) -> ExperiencesBatch:
-        experiences = [self.buffer[i].to_tuple() for i in indices]
-        states, actions, next_states, rewards, dones = zip(*experiences)
-        batch = ExperiencesBatch(
-            states=np.array(states),
-            actions=np.array(actions),
-            next_states=np.array(next_states),
-            rewards=np.array(rewards),
-            dones=np.array(dones),
-            indices=indices,
-            weights=None,
-        )
+        experiences = random.sample(self._buffer, k=batch_size)
+        batch = ExperiencesBatch.from_experiences(experiences)
         return batch
 
     @property
     def size(self) -> int:
         """The current size of the replay buffer."""
-        return len(self.buffer)
+        return len(self._buffer)
 
     def __len__(self) -> int:
         """The current size of the replay buffer."""
-        return len(self.buffer)
+        return self.size
