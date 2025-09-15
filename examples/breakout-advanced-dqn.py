@@ -71,16 +71,17 @@ num_actions = env.action_space.n  # type: ignore
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)
-policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-6)
+policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-5)
 agent = DQNAgentPER(
     model=model,
+    policy=policy,
     batch_size=64,
     memory_size=100_000,
     gamma=0.99,
-    policy=policy,
-    update_freq=1000,
+    update_freq=10_000,
     alpha=0.6,
     beta=0.4,
+    beta_annealing=0.0,
 )
 
 
@@ -91,12 +92,11 @@ if os.path.exists(model_path):
     model = keras.models.load_model(
         filepath=model_path, custom_objects={"DuelingHead": DuelingHead}, compile=True
     )  # Use custom objects to deserialize DuelinHead custom layer
-    model = cast(Model, model)
-    agent.set_model(model)
-    policy.epsilon = 0.1  # Resume with less exploration
+    agent.set_model(model)  # type: ignore
+    policy.epsilon = 1.0  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
-model.summary()
+model.summary()  # type: ignore
 
 # Create Atari frame preprocessor
 from dqn.atari_utils import MultiEnvAtariFrameStacker
@@ -108,13 +108,15 @@ frame_stacker = MultiEnvAtariFrameStacker(num_envs)
 # 💪 Training using vectorized environments (faster ⚡)
 envs = gym.make_vec("ALE/Breakout-v5", num_envs=num_envs, vectorization_mode="sync")
 
-max_train_steps = 100_000_000  # Max number of training steps
+max_train_steps = int(
+    1e6 * 1e3
+)  # Max number of training steps (1M episodes of max 1k steps)
 max_score = 500  # max score to stop training
 
 frames, _ = envs.reset()
 states = frame_stacker.reset(frames)
 scores, prev_lives = np.zeros(num_envs), np.zeros(num_envs)
-while True:
+for step in range(1, max_train_steps + 1):
     actions = agent.act_on_batch(states)
 
     frames, rewards, dones, truncs, infos = envs.step(actions)
@@ -133,12 +135,13 @@ while True:
     prev_lives = infos["lives"]
 
     metrics = None
-    if agent.memory.size > 1_000:
+    if agent.memory.size > 10_000:
         metrics = agent.train()
 
     loss = metrics["loss"] if metrics else np.nan
 
     print(
+        f"Steps: {step}, "
         f"Train steps: {agent.train_steps}, "
         f"Memory size: {agent.memory.size}, "
         f"Max score: {scores.max()}, "
@@ -147,8 +150,9 @@ while True:
     )
 
     # Save the model each 1000 train steps
-    if agent.train_steps % 1000 == 0:
+    if agent.train_steps > 0 and agent.train_steps % 1000 == 0:
         agent.model.save(filepath=model_path)
+        print(f"💾 Model saved to '{model_path}'.")
 
     # Terminate if max episodes or max score is reached
     if agent.train_steps > max_train_steps or scores.max() > max_score:

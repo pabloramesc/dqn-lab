@@ -4,6 +4,7 @@ from ..experiences import Experience, ExperiencesBatch
 from .circular_buffer import CircularBuffer
 from ..types import IntArray
 
+
 class PERBuffer:
     """A class representing a prioritized replay buffer for storing experiences
     with TD errors priority based sampling.
@@ -36,7 +37,7 @@ class PERBuffer:
         self.buffer = CircularBuffer(max_size=self.max_size)
         self.ptr = int(0)
         self.priorities = np.zeros(max_size, dtype=np.float32)
-        
+
     @property
     def size(self) -> int:
         return self.buffer.size
@@ -72,11 +73,11 @@ class PERBuffer:
         indices = np.arange(self.ptr, self.ptr + batch.size) % self.max_size
         self.priorities[indices] = priority
         self.ptr = (self.ptr + batch.size) % self.max_size
-    
+
     def get(self, index: int) -> Experience:
         """Return the experience at the given logical index."""
         return self.buffer.get(index)
-    
+
     def get_batch(self, indices: IntArray) -> ExperiencesBatch:
         return self.buffer.get_batch(indices)
 
@@ -112,3 +113,6 @@ class PERBuffer:
         self.priorities[indices] = np.clip(
             td_errors, a_min=self.min_priority, a_max=None
         )
+
+    def __len__(self) -> int:
+        return self.buffer.size

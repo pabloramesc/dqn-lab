@@ -47,12 +47,22 @@ class OptimizedPER(PERBuffer):
         weights = np.zeros(batch_size, dtype=np.float32)
 
         total = self.sum_tree.total_priority
-        for i in range(batch_size):
+        if total <= 0.0:
+            raise ValueError("No ")
+        i = 0
+        while i < batch_size:
             index, priority = self.sum_tree.sample()
+            if priority < self.min_priority:
+                continue  # skip uninitialized
             indices[i] = index
             weights[i] = (self.size * priority / total) ** -self.beta
+            i += 1
 
         batch = self.buffer.get_batch(indices)
+        batch.weights = weights / weights.max()
+
+        self.beta = min(1.0, self.beta + self.beta_annealing)
+
         return batch
 
     def update_priorities(self, indices: IntArray, td_errors: FloatArray) -> None:

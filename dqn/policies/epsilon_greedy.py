@@ -41,15 +41,20 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
         return action.item()
 
     def select_action_batch(self, q_values: np.ndarray) -> np.ndarray:
-        batch_size = q_values.shape[0]
-        num_actions = q_values.shape[1]
-        # Exploration: random actions
-        random_actions = np.random.choice(num_actions, batch_size)
-        # Exploitation: predicted actions
-        greedy_actions = np.argmax(q_values, axis=1)
-        # Epsilon-greedy policy
+        batch_size, num_actions = q_values.shape
+        
+        # Exploration mask
         mask = np.random.rand(batch_size) <= self.epsilon
-        actions = np.where(mask, random_actions, greedy_actions)
+        
+        # Initialize actions array
+        actions = np.empty(batch_size, dtype=np.int32)
+
+        # Exploration: random actions
+        actions[mask] = np.random.randint(num_actions, size=mask.sum())
+
+        # Exploitation: greedy actions
+        actions[~mask] = np.argmax(q_values[~mask], axis=1)
+
         return actions
 
     def update_params(self, steps: int = 1) -> None:

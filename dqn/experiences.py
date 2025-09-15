@@ -1,9 +1,9 @@
-from typing import NamedTuple, Sequence, Union, Optional
+from typing import NamedTuple, Optional
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import NDArray, ArrayLike
 
-from .types import FloatArray, IntArray, BoolArray
+from .types import FloatArray, IntArray, BoolArray, FloatLike, IntLike, BoolLike
 
 
 class Experience(NamedTuple):
@@ -17,17 +17,27 @@ class Experience(NamedTuple):
 
     @classmethod
     def create(
-        cls, state: NDArray, action: int, next_state: NDArray, reward: float, done: bool
+        cls,
+        state: ArrayLike,
+        action: IntLike,
+        next_state: ArrayLike,
+        reward: FloatLike,
+        done: BoolLike,
     ):
-        """Factory method to enforce type conversion."""
+        """Factory method to enforce type conversion and check state consistency."""
+        state = np.asarray(state)
+        next_state = np.array(next_state)
+
         if state.shape != next_state.shape:
             raise ValueError("State and next state must have same shape.")
+
         if state.dtype != next_state.dtype:
             raise ValueError("State and next state must have same data type.")
+
         return cls(
-            state=np.asarray(state),
+            state=state,
             action=int(action),
-            next_state=np.asarray(next_state),
+            next_state=next_state,
             reward=float(reward),
             done=bool(done),
         )

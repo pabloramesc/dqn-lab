@@ -6,12 +6,14 @@ from .replay_buffer import ReplayBuffer
 from ..experiences import Experience, ExperiencesBatch
 from ..types import IntArray
 
+
 class CircularBuffer(ReplayBuffer):
     """An efficient circular buffer for storing and sampling experiences."""
 
     def __init__(self, max_size: int):
         self._max_size = int(max_size)
         self._buffer: NDArray = np.empty(self._max_size, dtype=object)  # type: ignore
+        # self._buffer: list[Experience] = [None] * self._max_size  # type: ignore
         self._size = 0
         self._index = 0
 
@@ -41,6 +43,7 @@ class CircularBuffer(ReplayBuffer):
         return self._buffer[index]
 
     def get_batch(self, indices: IntArray) -> ExperiencesBatch:
+        # experiences = [self._buffer[i] for i in indices]
         indices = np.asarray(indices, dtype=np.int32)
         experiences = self._buffer[indices]
         batch = ExperiencesBatch.from_experiences(experiences, indices)  # type: ignore

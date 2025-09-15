@@ -1,4 +1,4 @@
-from typing import Union, SupportsFloat
+from typing import Union
 import numpy as np
 
 FloatLike = Union[float, np.floating]
@@ -22,9 +22,14 @@ class SumTree:
             raise ValueError("Cannot sample from an empty sum-tree.")
 
         r = np.random.uniform(0, self.total_priority)
-        leaf_idx, priority = self._get_leaf(r)
+        leaf_idx, priority = self._get_leaf(r) # type: ignore
         data_idx = leaf_idx - (self.capacity - 1)
         return data_idx, priority
+
+    def get_priority(self, data_idx: int) -> float:
+        """Return the current priority value for the given data index."""
+        leaf_idx = data_idx + self.capacity - 1
+        return self.tree[leaf_idx]
 
     def update_priority(self, data_idx: int, priority: FloatLike):
         """Update a priority for a given buffer index."""
@@ -52,5 +57,9 @@ class SumTree:
         return leaf_idx, self.tree[leaf_idx]
 
     @property
-    def total_priority(self):
+    def total_priority(self) -> np.float32:
         return self.tree[0]
+    
+    @property
+    def size(self) -> int:
+        return self.data_ptr

@@ -1,7 +1,26 @@
-from typing import Sequence, Union
+from typing import (
+    Protocol,
+    Sequence,
+    SupportsFloat,
+    SupportsInt,
+    Union,
+    runtime_checkable,
+)
 
 import numpy as np
 from numpy.typing import NDArray
+
+
+@runtime_checkable
+class SupportsBool(Protocol):
+    """An ABC with one abstract method __bool__."""
+
+    def __bool__(self) -> bool: ...
+
+
+FloatLike = SupportsFloat
+IntLike = SupportsInt
+BoolLike = SupportsBool
 
 FloatArray = Union[NDArray[np.floating], Sequence[float]]
 IntArray = Union[NDArray[np.integer], Sequence[int]]

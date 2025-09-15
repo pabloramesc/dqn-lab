@@ -40,7 +40,7 @@ def create_model(state_shape: tuple, num_actions: int) -> Model:
     )
 
     model.compile(
-        optimizer=Adam(learning_rate=0.00025, clipnorm=1.0),
+        optimizer=Adam(learning_rate=0.00025, clipnorm=1.0),  # type: ignore
         loss=Huber(delta=1.0),
     )
 
@@ -54,7 +54,7 @@ from dqn import DQNAgent, EpsilonGreedyPolicy
 # Initialize state and action space dimensions
 env = gym.make("ALE/Breakout-v5")
 state_shape = (84, 84, 4)
-num_actions = env.action_space.n
+num_actions = env.action_space.n  # type: ignore
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)
@@ -75,11 +75,11 @@ model_path = "models/breakout-deepmind-model.keras"
 
 if os.path.exists(model_path):
     model = keras.models.load_model(filepath=model_path, compile=True)
-    agent.set_model(model)
+    agent.set_model(model)  # type: ignore
     policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
-model.summary()
+model.summary()  # type: ignore
 
 
 # %%

@@ -6,7 +6,7 @@ from dqn.experiences import Experience, ExperiencesBatch
 
 
 @pytest.fixture
-def sample_experience():
+def experience():
     """Create a sample experience for testing."""
     return Experience(
         state=np.array([1.0, 2.0]),
@@ -18,33 +18,33 @@ def sample_experience():
 
 
 @pytest.fixture
-def replay_buffer():
+def buffer():
     """Create a ReplayBuffer with small max size."""
     return ReplayBuffer(max_size=5)
 
 
-def test_add_single_experience(replay_buffer, sample_experience):
-    replay_buffer.add(sample_experience)
-    assert replay_buffer.size == 1
-    assert replay_buffer.get(0) == sample_experience
+def test_add_single_experience(buffer, experience):
+    buffer.add(experience)
+    assert buffer.size == 1
+    assert buffer.get(0) == experience
 
 
-def test_add_multiple_experiences(replay_buffer, sample_experience):
-    experiences = [sample_experience] * 3
+def test_add_multiple_experiences(buffer, experience):
+    experiences = [experience] * 3
     for exp in experiences:
-        replay_buffer.add(exp)
-    assert replay_buffer.size == 3
+        buffer.add(exp)
+    assert buffer.size == 3
     for i, exp in enumerate(experiences):
-        assert exp is replay_buffer.get(i)
+        assert exp is buffer.get(i)
 
 
-def test_add_batch_of_experiences(replay_buffer, sample_experience):
-    experiences = [sample_experience] * 3
+def test_add_batch_of_experiences(buffer, experience):
+    experiences = [experience] * 3
     batch = ExperiencesBatch.from_experiences(experiences)
-    replay_buffer.add_batch(batch)
-    assert replay_buffer.size == 3
+    buffer.add_batch(batch)
+    assert buffer.size == 3
     for i, exp in enumerate(experiences):
-        buf_exp = replay_buffer.get(i)
+        buf_exp = buffer.get(i)
         # Check arrays
         assert np.allclose(exp.state, buf_exp.state)
         assert np.allclose(exp.next_state, buf_exp.next_state)
@@ -54,20 +54,20 @@ def test_add_batch_of_experiences(replay_buffer, sample_experience):
         assert exp.done == buf_exp.done
 
 
-def test_buffer_max_size(replay_buffer, sample_experience):
-    experiences = [sample_experience] * 10  # more than max_size
+def test_buffer_max_size(buffer, experience):
+    experiences = [experience] * 10  # more than max_size
     batch = ExperiencesBatch.from_experiences(experiences)
-    replay_buffer.add_batch(batch)
-    assert replay_buffer.size == replay_buffer._max_size
+    buffer.add_batch(batch)
+    assert buffer.size == buffer._max_size
 
 
-def test_sample_returns_correct_batch(replay_buffer, sample_experience):
+def test_sample_returns_correct_batch(buffer, experience):
     # Fill buffer with 5 experiences
     for _ in range(5):
-        replay_buffer.add(sample_experience)
+        buffer.add(experience)
 
     batch_size = 3
-    batch: ExperiencesBatch = replay_buffer.sample(batch_size)
+    batch: ExperiencesBatch = buffer.sample(batch_size)
 
     assert isinstance(batch, ExperiencesBatch)
     assert batch.states.shape[0] == batch_size
@@ -78,7 +78,7 @@ def test_sample_returns_correct_batch(replay_buffer, sample_experience):
     np.testing.assert_array_equal(batch.weights, None)
 
 
-def test_len_property(replay_buffer, sample_experience):
-    assert len(replay_buffer) == 0
-    replay_buffer.add(sample_experience)
-    assert len(replay_buffer) == 1
+def test_len_property(buffer, experience):
+    assert len(buffer) == 0
+    buffer.add(experience)
+    assert len(buffer) == 1

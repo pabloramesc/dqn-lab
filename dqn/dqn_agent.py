@@ -1,5 +1,3 @@
-from typing import Optional
-
 import keras
 import numpy as np
 import tensorflow as tf
@@ -15,14 +13,6 @@ class DQNAgent:
     This agent uses a neural network to approximate the Q-function and can
     interact with an environment using an exploration policy. Supports training
     with a replay buffer.
-
-    Attributes:
-        model (keras.Model): Q-network model for action-value estimation.
-        target_model (keras.Model): Target network for stable training.
-        batch_size (int): Number of experiences per training batch.
-        memory (ReplayBuffer): Replay buffer for storing experiences.
-        gamma (float): Discount factor for future rewards.
-        policy (ExplorationPolicy): Exploration policy for action selection.
     """
 
     def __init__(
