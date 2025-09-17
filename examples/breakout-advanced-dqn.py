@@ -6,6 +6,7 @@
 # %%
 # 📦 Import modules and setup environment
 import os
+import time
 from typing import cast
 
 import ale_py
@@ -113,6 +114,8 @@ max_train_steps = int(
 )  # Max number of training steps (1M episodes of max 1k steps)
 max_score = 500  # max score to stop training
 
+train_t0 = None
+
 frames, _ = envs.reset()
 states = frame_stacker.reset(frames)
 scores, prev_lives = np.zeros(num_envs), np.zeros(num_envs)
@@ -138,11 +141,19 @@ for step in range(1, max_train_steps + 1):
     if agent.memory.size > 10_000:
         metrics = agent.train()
 
+    if train_t0 is None and agent.train_steps > 0:
+        train_t0 = time.time()
+
     loss = metrics["loss"] if metrics else np.nan
+
+    train_elapsed = time.time() - train_t0 if train_t0 is not None else 0.0
+    train_speed = agent.train_steps / train_elapsed if train_elapsed > 0.0 else 0.0
 
     print(
         f"Steps: {step}, "
         f"Train steps: {agent.train_steps}, "
+        f"Train time: {train_elapsed:.0f} s, "
+        f"Train speed: {train_speed:.2f} sps, "
         f"Memory size: {agent.memory.size}, "
         f"Max score: {scores.max()}, "
         f"Epsilon: {policy.epsilon:.4f}, "

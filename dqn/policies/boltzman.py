@@ -1,8 +1,6 @@
 import numpy as np
 
-from .base import ExplorationPolicy
-
-from typing import Literal
+from .base import DecayType, ExplorationPolicy
 
 
 class BoltzmannPolicy(ExplorationPolicy):
@@ -16,7 +14,7 @@ class BoltzmannPolicy(ExplorationPolicy):
         tau: float = 1.0,
         tau_min: float = 0.0,
         tau_decay: float = 1e-6,
-        decay_type: Literal["fixed", "linear", "exponential"] = "fixed",
+        decay_type: DecayType = "fixed",
     ) -> None:
         """
         Initializes the BoltzmannPolicy.
@@ -72,7 +70,7 @@ class BoltzmannPolicy(ExplorationPolicy):
 
         else:
             raise ValueError(f"Not valid decay type '{self.decay_type}'.")
-        
+
     def get_dynamic_params(self) -> dict[str, float]:
         return {"tau": self.tau}
 

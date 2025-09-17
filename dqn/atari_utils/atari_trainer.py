@@ -1,10 +1,11 @@
+import time
+from typing import Any, Dict, Optional, Tuple
+
 import gymnasium as gym
 import numpy as np
-from typing import Tuple, Dict, Any, Optional
 
 from ..dqn_agent import DQNAgent
 from ..experiences import Experience
-
 from .frame_stacker import AtariFrameStacker
 
 
@@ -68,7 +69,7 @@ class AtariTrainer:
             model_path: If provided, save the trained model to this path after each episode.
             verbose: Whether to print training status string.
         """
-        metrics = None
+        metrics, train_t0 = None, None
         for episode in range(max_episodes):
             frame, info = self.reset_with_noops(max_noop_steps)
             state = self.frame_stacker.reset(frame)
@@ -101,6 +102,9 @@ class AtariTrainer:
                 ):
                     metrics = self.agent.train()
 
+                if train_t0 is None and self.agent.train_steps > 0:
+                    train_t0 = time.time()
+
                 if verbose and terminated or steps % 10 == 0:  # Log each 10 steps
                     msg = (
                         f"Episode: {episode+1}, Steps: {steps}, Score: {score}, "
@@ -113,8 +117,14 @@ class AtariTrainer:
 
                     if metrics is not None:
                         loss = metrics.get("loss", np.nan)
+                        elapsed = (
+                            time.time() - train_t0 if train_t0 is not None else 0.0
+                        )
                         msg += (
-                            f", Train steps: {self.agent.train_steps}, Loss: {loss:.4e}"
+                            f", Train steps: {self.agent.train_steps}"
+                            f", Train time: {elapsed:.0f} s"
+                            f", Train speed: {self.agent.train_steps/elapsed:.0f} sps"
+                            f", Loss: {loss:.4e}"
                         )
 
                     # Use carriage return to overwrite episode string

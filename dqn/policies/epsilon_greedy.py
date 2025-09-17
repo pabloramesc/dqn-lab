@@ -1,8 +1,6 @@
-from typing import Literal
-
 import numpy as np
 
-from .base import ExplorationPolicy
+from .base import DecayType, ExplorationPolicy
 
 
 class EpsilonGreedyPolicy(ExplorationPolicy):
@@ -18,7 +16,7 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
         epsilon: float = 1.0,
         epsilon_min: float = 0.0,
         epsilon_decay: float = 1e-6,
-        decay_type: Literal["fixed", "linear", "exponential"] = "fixed",
+        decay_type: DecayType = "fixed",
     ) -> None:
         """Initializes the epsilon-greedy policy.
 
@@ -42,10 +40,10 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 
     def select_action_batch(self, q_values: np.ndarray) -> np.ndarray:
         batch_size, num_actions = q_values.shape
-        
+
         # Exploration mask
         mask = np.random.rand(batch_size) <= self.epsilon
-        
+
         # Initialize actions array
         actions = np.empty(batch_size, dtype=np.int32)
 

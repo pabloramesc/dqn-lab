@@ -94,7 +94,7 @@ trainer.train(
     min_memory_size=10_000,
     train_after_steps=4,
     max_episode_steps=100_000,
-    max_score=500,
+    max_score=1000,
     model_path=model_path,
     verbose=True,
 )

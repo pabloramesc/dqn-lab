@@ -1,9 +1,11 @@
 """Abstract base class for exploration policies."""
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Literal
 
 import numpy as np
+
+DecayType = Literal["fixed", "linear", "exponential"]
 
 
 class ExplorationPolicy(ABC):
@@ -53,7 +55,7 @@ class ExplorationPolicy(ABC):
     def set_full_exploration(self) -> None:
         """Force the policy into pure exploration mode (actions 100% random)."""
         return
-    
+
     def set_full_exploitation(self) -> None:
         """Force the policy into pure exploitation mode (no exploration)."""
         return
