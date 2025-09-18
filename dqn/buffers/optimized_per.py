@@ -5,7 +5,7 @@ from dqn.experiences import Experience, ExperiencesBatch
 
 from .per_buffer import PERBuffer
 from .sum_tree import SumTree
-from ..types import IntArray, FloatArray
+from ..utils.types import IntArray, FloatArray
 
 
 class OptimizedPER(PERBuffer):

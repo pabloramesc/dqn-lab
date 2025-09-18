@@ -4,7 +4,7 @@ from numpy.typing import NDArray
 
 from .replay_buffer import ReplayBuffer
 from ..experiences import Experience, ExperiencesBatch
-from ..types import IntArray
+from ..utils.types import IntArray
 
 
 class CircularBuffer(ReplayBuffer):

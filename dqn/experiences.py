@@ -3,7 +3,7 @@ from typing import NamedTuple, Optional
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 
-from .types import FloatArray, IntArray, BoolArray, FloatLike, IntLike, BoolLike
+from .utils.types import FloatArray, IntArray, BoolArray, FloatLike, IntLike, BoolLike
 
 
 class Experience(NamedTuple):

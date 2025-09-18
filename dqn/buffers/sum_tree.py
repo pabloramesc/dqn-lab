@@ -10,6 +10,14 @@ class SumTree:
         self.tree = np.zeros(2 * capacity - 1, dtype=np.float32)
         self.data_ptr = 0
 
+    @property
+    def total_priority(self) -> np.float32:
+        return self.tree[0]
+
+    @property
+    def size(self) -> int:
+        return self.data_ptr
+
     def add(self, priority: FloatLike):
         """Add a new priority to the tree with circular replacement."""
         idx = self.data_ptr + self.capacity - 1
@@ -22,7 +30,7 @@ class SumTree:
             raise ValueError("Cannot sample from an empty sum-tree.")
 
         r = np.random.uniform(0, self.total_priority)
-        leaf_idx, priority = self._get_leaf(r) # type: ignore
+        leaf_idx, priority = self._get_leaf(r)  # type: ignore
         data_idx = leaf_idx - (self.capacity - 1)
         return data_idx, priority
 
@@ -36,6 +44,24 @@ class SumTree:
         leaf_idx = data_idx + self.capacity - 1
         self._update_leaf(leaf_idx, priority)
 
+    def check_consistency(self, idx: int = 0) -> bool:
+        """Recursively check if each node equals the sum of its children."""
+        # If leaf node, return consistent
+        if idx >= self.capacity - 1:
+            return True
+
+        left = 2 * idx + 1
+        right = left + 1
+        # Recursively check children first
+        left_ok = self.check_consistency(left)
+        right_ok = self.check_consistency(right)
+
+        # Compute expected sum
+        expected = self.tree[left] + self.tree[right]
+        node_ok = np.isclose(self.tree[idx], expected)
+
+        return node_ok and left_ok and right_ok
+
     def _update_leaf(self, leaf_idx: int, priority: FloatLike):
         change = priority - self.tree[leaf_idx]
         self.tree[leaf_idx] = priority
@@ -44,7 +70,7 @@ class SumTree:
             leaf_idx = (leaf_idx - 1) // 2
             self.tree[leaf_idx] += change
 
-    def _get_leaf(self, value: FloatLike):
+    def _get_leaf(self, value: FloatLike) -> tuple[int, np.float32]:
         leaf_idx = 0
         while leaf_idx < self.capacity - 1:  # not a leaf
             left = 2 * leaf_idx + 1
@@ -55,11 +81,3 @@ class SumTree:
                 value -= self.tree[left]
                 leaf_idx = right
         return leaf_idx, self.tree[leaf_idx]
-
-    @property
-    def total_priority(self) -> np.float32:
-        return self.tree[0]
-    
-    @property
-    def size(self) -> int:
-        return self.data_ptr

@@ -1,7 +1,7 @@
 from typing import Protocol
 
 from ..experiences import Experience, ExperiencesBatch
-from ..types import IntArray
+from ..utils.types import IntArray
 
 
 class BufferProtocol(Protocol):

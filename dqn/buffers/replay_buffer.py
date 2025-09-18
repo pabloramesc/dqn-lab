@@ -3,7 +3,7 @@ import random
 import numpy as np
 
 from ..experiences import Experience, ExperiencesBatch
-from ..types import IntArray
+from ..utils.types import IntArray
 
 class ReplayBuffer:
     """A class representing a basic replay buffer for storing experiences."""

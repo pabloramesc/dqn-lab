@@ -43,7 +43,7 @@ from keras.losses import Huber
 from keras.models import Model
 from keras.optimizers import Adam
 
-from dqn.utils import DuelingHead
+from dqn.layers import DuelingHead
 
 
 def create_model(state_shape: tuple, num_actions: int) -> Model:
@@ -106,7 +106,7 @@ agent = DQNAgentPER(
     model=model,
     policy=policy,
     batch_size=32,
-    memory_size=100_000,
+    memory_size=200_000,
     gamma=0.99,
     update_freq=10_000,
     alpha=0.6,
@@ -123,7 +123,7 @@ if os.path.exists(model_path):
         filepath=model_path, custom_objects={"DuelingHead": DuelingHead}, compile=True
     )  # Use custom objects to deserialize DuelinHead custom layer
     agent.set_model(model)  # type: ignore
-    policy.epsilon = 1.0  # Resume with less exploration
+    policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
 model.summary()  # type: ignore
@@ -137,6 +137,8 @@ frame_stacker = MultiEnvAtariFrameStacker(num_envs)
 # %%
 # 💪 Training using vectorized environments (faster ⚡)
 envs = gym.make_vec("ALE/Breakout-v5", num_envs=num_envs, vectorization_mode="sync")
+
+from dqn.utils.formatting import format_time
 
 max_train_steps = int(
     1e6 * 1e3
@@ -156,14 +158,16 @@ for step in range(1, max_train_steps + 1):
     frame_stacker.reset_done_envs(frames, dones)
     next_states = frame_stacker.add_frames(frames)
 
-    live_lost = dones | (prev_lives > infos["lives"])
-    clipped_rewards = np.where(live_lost, -1.0, np.clip(rewards, -1.0, +1.0))
+    life_lost = dones | (prev_lives > infos["lives"])
+    clipped_rewards = np.clip(rewards, -1.0, +1.0)  # Clip reward to [-1, +1] range
+    clipped_rewards[life_lost] = -1.0  # Apply life lost penalty
 
     batch = ExperiencesBatch(states, actions, next_states, clipped_rewards, dones)
     agent.add_experiences_batch(batch)
 
     states = next_states
-    scores = (scores + rewards) * (~dones)
+    scores = scores + rewards
+    scores[dones] = 0.0  # Reset scores for terminated agents/environments
     prev_lives = infos["lives"]
 
     metrics = None
@@ -181,7 +185,7 @@ for step in range(1, max_train_steps + 1):
     print(
         f"Steps: {step}, "
         f"Train steps: {agent.train_steps}, "
-        f"Train time: {train_elapsed:.0f} s, "
+        f"Train time: {format_time(train_elapsed)}, "
         f"Train speed: {train_speed:.2f} sps, "
         f"Memory size: {agent.memory.size}, "
         f"Max score: {scores.max()}, "

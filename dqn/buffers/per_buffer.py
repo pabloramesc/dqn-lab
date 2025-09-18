@@ -2,7 +2,7 @@ import numpy as np
 
 from ..experiences import Experience, ExperiencesBatch
 from .circular_buffer import CircularBuffer
-from ..types import IntArray
+from ..utils.types import IntArray
 
 
 class PERBuffer:

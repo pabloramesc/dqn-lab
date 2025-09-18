@@ -116,3 +116,18 @@ def test_get_priority_with_circular_overwrite(tree):
     assert np.isclose(tree.get_priority(1), 0.2)
     assert np.isclose(tree.get_priority(2), 0.3)
     assert np.isclose(tree.get_priority(3), 0.5)
+
+
+def test_check_consistency_true(tree):
+    priorities = [1.0, 2.0, 3.0, 4.0]
+    for p in priorities:
+        tree.add(p)
+    assert tree.check_consistency()
+
+
+def test_check_consistency_false(tree):
+    priorities = [1.0, 2.0, 3.0, 4.0]
+    for p in priorities:
+        tree.add(p)
+    tree.tree[0] = 999.0  # Corrupt an internal node
+    assert not tree.check_consistency()
