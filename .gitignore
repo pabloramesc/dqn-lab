@@ -177,4 +177,5 @@ cython_debug/
 .vscode
 
 # Keras models
-.keras
+models
+*.keras
