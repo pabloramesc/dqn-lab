@@ -7,19 +7,38 @@
 # 📦 Import modules and setup environment
 import os
 import time
-from typing import cast
 
 import ale_py
 import gymnasium as gym
 import keras
 import numpy as np
+from keras import backend, mixed_precision
 
 # Ensure ALE environments are registered
 gym.register_envs(ale_py)
 
+# Set keras global policy to mixed_float16
+mixed_precision.set_global_policy("mixed_float16")
+print("Compute dtype:", mixed_precision.global_policy().compute_dtype)
+print("Variable dtype:", mixed_precision.global_policy().variable_dtype)
+
+# Ensure keras image format is (height, width, channels) - applies to Conv2D layers
+backend.set_image_data_format("channels_last")
+print("Image data format:", backend.image_data_format())
+
+
 # %%
 # 🧠 Dueling DQN with VGG-style convolutional layers
-from keras.layers import Conv2D, Dense, Flatten, Input, MaxPooling2D, Rescaling
+from keras.layers import (
+    Conv2D,
+    Dense,
+    Flatten,
+    Input,
+    MaxPooling2D,
+    Rescaling,
+    Dropout,
+    SpatialDropout2D,
+)
 from keras.losses import Huber
 from keras.models import Model
 from keras.optimizers import Adam
@@ -37,26 +56,34 @@ def create_model(state_shape: tuple, num_actions: int) -> Model:
     x = Conv2D(32, (3, 3), activation="relu", padding="same")(x)
     x = Conv2D(32, (3, 3), activation="relu", padding="same")(x)
     x = MaxPooling2D((2, 2))(x)
+    x = SpatialDropout2D(0.1)(x)
 
     x = Conv2D(64, (3, 3), activation="relu", padding="same")(x)
     x = Conv2D(64, (3, 3), activation="relu", padding="same")(x)
     x = MaxPooling2D((2, 2))(x)
+    x = SpatialDropout2D(0.1)(x)
 
     x = Conv2D(128, (3, 3), activation="relu", padding="same")(x)
     x = Conv2D(128, (3, 3), activation="relu", padding="same")(x)
     x = MaxPooling2D((2, 2))(x)
+    x = SpatialDropout2D(0.1)(x)
 
     x = Flatten()(x)
-    x = Dense(512, activation="relu")(x)
 
-    # Dueling DQN streams
-    value = Dense(1)(x)
-    advantage = Dense(num_actions)(x)
+    # Value head
+    v = Dense(512, activation="swish")(x)
+    v = Dropout(0.2)(v)
+    v = Dense(1, activation="linear")(v)
 
-    # Combine value and advantage
-    q_values = DuelingHead()([value, advantage])
+    # Advantage head
+    a = Dense(512, activation="swish")(x)
+    a = Dropout(0.2)(a)
+    a = Dense(num_actions, activation="linear")(a)
 
-    model = Model(inputs=inputs, outputs=q_values)
+    # Combine value and advantage: V(s) + A(s, a) -> Q(s, a)
+    q = DuelingHead(dtype="float32")([v, a])
+
+    model = Model(inputs=inputs, outputs=q)
     model.compile(optimizer=Adam(learning_rate=0.00025), loss=Huber(delta=1.0))  # type: ignore
     return model
 
@@ -72,11 +99,13 @@ num_actions = env.action_space.n  # type: ignore
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)
-policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-5)
+policy = EpsilonGreedyPolicy(
+    epsilon=1.0, epsilon_min=0.01, epsilon_decay=1e-5, decay_type="linear"
+)
 agent = DQNAgentPER(
     model=model,
     policy=policy,
-    batch_size=64,
+    batch_size=32,
     memory_size=100_000,
     gamma=0.99,
     update_freq=10_000,
