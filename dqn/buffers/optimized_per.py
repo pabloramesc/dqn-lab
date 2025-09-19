@@ -3,12 +3,12 @@ from numpy.typing import NDArray
 
 from dqn.experiences import Experience, ExperiencesBatch
 
-from .per_buffer import PERBuffer
+from .simple_per import SimplePER
 from .sum_tree import SumTree
 from ..utils.types import IntArray, FloatArray
 
 
-class OptimizedPER(PERBuffer):
+class OptimizedPER(SimplePER):
 
     def __init__(
         self,
@@ -21,7 +21,6 @@ class OptimizedPER(PERBuffer):
         super().__init__(max_size, alpha, beta, beta_annealing, min_priority)
         self.sum_tree = SumTree(capacity=self.max_size)
         # Remove priorities buffer for safe
-        self.ptr = None
         self.priorities = None
 
     def add(self, exp: Experience, td_error: float = 1) -> None:
@@ -30,9 +29,11 @@ class OptimizedPER(PERBuffer):
         self.sum_tree.add(priority)
 
     def add_batch(
-        self, batch: ExperiencesBatch, td_errors: NDArray[np.float32] | None = None
+        self, batch: ExperiencesBatch, td_errors: FloatArray | None = None
     ) -> None:
-        self.buffer.add_batch(batch)
+        experiences = batch.to_experiences()
+        for exp in experiences:
+            self.buffer.add(exp)
 
         if td_errors is None:
             priorities = np.ones(batch.size, dtype=np.float32)
@@ -43,7 +44,7 @@ class OptimizedPER(PERBuffer):
             self.sum_tree.add(priority)
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
-        indices = np.zeros(batch_size, dtype=np.int32)
+        indices = np.zeros(batch_size, dtype=int)
         weights = np.zeros(batch_size, dtype=np.float32)
 
         total = self.sum_tree.total_priority
@@ -58,7 +59,8 @@ class OptimizedPER(PERBuffer):
             weights[i] = (self.size * priority / total) ** -self.beta
             i += 1
 
-        batch = self.buffer.get_batch(indices)
+        experiences = [self.buffer.get(i) for i in indices]
+        batch = ExperiencesBatch.from_experiences(experiences, indices)
         batch.weights = weights / weights.max()
 
         self.beta = min(1.0, self.beta + self.beta_annealing)

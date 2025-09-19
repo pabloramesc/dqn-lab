@@ -1,4 +1,4 @@
-from typing import NamedTuple, Optional
+from typing import NamedTuple, Optional, Sequence
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
@@ -90,7 +90,7 @@ class ExperiencesBatch:
 
     @classmethod
     def from_experiences(
-        cls, experiences: list[Experience], indices: Optional[IntArray] = None
+        cls, experiences: Sequence[Experience], indices: Optional[IntArray] = None
     ):
         """Create an ExperiencesBatch from a list of Experience objects."""
         states, actions, next_states, rewards, dones = zip(*experiences)

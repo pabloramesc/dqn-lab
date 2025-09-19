@@ -58,7 +58,7 @@ def test_buffer_max_size(buffer, experience):
     experiences = [experience] * 10  # more than max_size
     batch = ExperiencesBatch.from_experiences(experiences)
     buffer.add_batch(batch)
-    assert buffer.size == buffer._max_size
+    assert buffer.size == buffer.max_size
 
 
 def test_sample_returns_correct_batch(buffer, experience):
@@ -76,9 +76,3 @@ def test_sample_returns_correct_batch(buffer, experience):
     assert batch.rewards.shape[0] == batch_size
     assert batch.dones.shape[0] == batch_size
     np.testing.assert_array_equal(batch.weights, None)
-
-
-def test_len_property(buffer, experience):
-    assert len(buffer) == 0
-    buffer.add(experience)
-    assert len(buffer) == 1

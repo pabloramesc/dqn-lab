@@ -1,59 +1,58 @@
-import numpy as np
 import random
-from numpy.typing import NDArray
+from typing import Generic, List, TypeVar
 
-from .replay_buffer import ReplayBuffer
-from ..experiences import Experience, ExperiencesBatch
-from ..utils.types import IntArray
+T = TypeVar("T")  # Type of elements stored in buffer
 
 
-class CircularBuffer(ReplayBuffer):
-    """An efficient circular buffer for storing and sampling experiences."""
+class CircularBuffer(Generic[T]):
+    """Fixed-size circular buffer for storing arbitrary objects."""
 
-    def __init__(self, max_size: int):
-        self._max_size = int(max_size)
-        self._buffer: NDArray = np.empty(self._max_size, dtype=object)  # type: ignore
-        # self._buffer: list[Experience] = [None] * self._max_size  # type: ignore
-        self._size = 0
+    def __init__(self, max_size: int) -> None:
+        self._max_size = max_size
+        self._buffer: List[T] = []
         self._index = 0
-
-    def add(self, exp: Experience):
-        self._buffer[self._index] = exp
-        self._size = min(self._size + 1, self._max_size)
-        self._index = (self._index + 1) % self._max_size
-
-    def add_batch(self, batch: ExperiencesBatch):
-        experiences = batch.to_experiences()
-        for exp in experiences:
-            self.add(exp)
-
-    def get(self, index: int) -> Experience:
-        if self._size == 0:
-            raise IndexError("Buffer is empty.")
-
-        if index < 0:
-            index += self._size
-
-        if index < 0 or index >= self._size:
-            raise IndexError(f"Index {index} out of range.")
-
-        if self._size == self._max_size:
-            index = (index + self._index) % self._max_size
-
-        return self._buffer[index]
-
-    def get_batch(self, indices: IntArray) -> ExperiencesBatch:
-        # experiences = [self._buffer[i] for i in indices]
-        indices = np.asarray(indices, dtype=np.int32)
-        experiences = self._buffer[indices]
-        batch = ExperiencesBatch.from_experiences(experiences, indices)  # type: ignore
-        return batch
-
-    def sample(self, batch_size: int) -> ExperiencesBatch:
-        experiences = random.choices(self._buffer[: self._size], k=batch_size)
-        batch = ExperiencesBatch.from_experiences(experiences)
-        return batch
 
     @property
     def size(self) -> int:
-        return self._size
+        return len(self._buffer)
+
+    @property
+    def is_full(self) -> bool:
+        return len(self._buffer) == self._max_size
+
+    def clear(self) -> None:
+        self._buffer.clear()
+        self._index = 0
+
+    def add(self, item: T) -> None:
+        if self.size < self._max_size:
+            self._buffer.append(item)
+        else:
+            self._buffer[self._index] = item
+        self._index = (self._index + 1) % self._max_size
+
+    def get(self, index: int) -> T:
+        if self.size == 0:
+            raise IndexError("Buffer is empty.")
+
+        if index < 0:
+            index += self.size
+
+        if index < 0 or index >= self.size:
+            raise IndexError(f"Index {index} out of range.")
+
+        if self.is_full:
+            index = (self._index + index) % self._max_size
+
+        return self._buffer[index]
+
+    def sample(self, size: int) -> List[T]:
+        if self.size == 0:
+            return []
+        return random.choices(self._buffer, k=size)
+
+    def to_list(self) -> List[T]:
+        if not self.is_full:
+            return self._buffer
+        # Full buffer: reorder oldest → newest
+        return self._buffer[self._index :] + self._buffer[: self._index]

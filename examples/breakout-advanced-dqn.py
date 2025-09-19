@@ -149,7 +149,7 @@ train_t0 = None
 
 frames, _ = envs.reset()
 states = frame_stacker.reset(frames)
-scores, prev_lives = np.zeros(num_envs), np.zeros(num_envs)
+scores, prev_lifes = np.zeros(num_envs), np.zeros(num_envs)
 for step in range(1, max_train_steps + 1):
     actions = agent.act_on_batch(states)
 
@@ -158,7 +158,7 @@ for step in range(1, max_train_steps + 1):
     frame_stacker.reset_done_envs(frames, dones)
     next_states = frame_stacker.add_frames(frames)
 
-    life_lost = dones | (prev_lives > infos["lives"])
+    life_lost = dones | (prev_lifes > infos["lives"])
     clipped_rewards = np.clip(rewards, -1.0, +1.0)  # Clip reward to [-1, +1] range
     clipped_rewards[life_lost] = -1.0  # Apply life lost penalty
 
@@ -166,9 +166,9 @@ for step in range(1, max_train_steps + 1):
     agent.add_experiences_batch(batch)
 
     states = next_states
-    scores = scores + rewards
+    scores += rewards
     scores[dones] = 0.0  # Reset scores for terminated agents/environments
-    prev_lives = infos["lives"]
+    prev_lifes = infos["lives"]
 
     metrics = None
     if agent.memory.size > 10_000:

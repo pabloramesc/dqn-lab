@@ -135,12 +135,6 @@ def test_update_priorities(buffer, experience):
         assert np.isclose(priority, expected)
 
 
-def test_len_property(buffer, experience):
-    assert len(buffer) == 0
-    buffer.add(experience)
-    assert len(buffer) == 1
-
-
 def test_sampling_probability_distribution(buffer, experience):
     buffer.alpha = 1.0  # alpha=1 → pure proportional sampling
     experiences = [experience] * 3

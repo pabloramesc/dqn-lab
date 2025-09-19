@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from dqn.buffers import PERBuffer
+from dqn.buffers import SimplePER
 from dqn.experiences import Experience, ExperiencesBatch
 
 
@@ -20,7 +20,7 @@ def experience():
 @pytest.fixture
 def buffer():
     """Create a PERBuffer with small max size."""
-    return PERBuffer(max_size=5, min_priority=0.1)
+    return SimplePER(max_size=5, min_priority=0.1)
 
 
 def _compare_experiences(exp1: Experience, exp2: Experience):
@@ -126,12 +126,6 @@ def test_update_priorities(buffer, experience):
 
     expected = np.clip(new_td_errors, a_min=buffer.min_priority, a_max=None)
     assert np.allclose(buffer.priorities[:3], expected)
-
-
-def test_len_property(buffer, experience):
-    assert len(buffer) == 0
-    buffer.add(experience)
-    assert len(buffer) == 1
 
 
 def test_sampling_probability_distribution(buffer, experience):

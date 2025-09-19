@@ -4,9 +4,9 @@ import numpy as np
 
 from dqn.buffers import (
     BufferProtocol,
-    CircularBuffer,
+    NumpyCircularBuffer,
     OptimizedPER,
-    PERBuffer,
+    SimplePER,
     ReplayBuffer,
 )
 from dqn.experiences import Experience, ExperiencesBatch
@@ -68,8 +68,8 @@ dummy_batch = ExperiencesBatch.from_experiences(dummy_experiences)
 
 buffers: dict[str, BufferProtocol] = {
     "deque": ReplayBuffer(max_size=BUFFER_SIZE),
-    "circular": CircularBuffer(max_size=BUFFER_SIZE),
-    "per": PERBuffer(max_size=BUFFER_SIZE),
+    "circular": NumpyCircularBuffer(max_size=BUFFER_SIZE),
+    "per": SimplePER(max_size=BUFFER_SIZE),
     "optimized-per": OptimizedPER(max_size=BUFFER_SIZE),
 }
 

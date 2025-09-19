@@ -1,11 +1,40 @@
 import numpy as np
 
 from ..experiences import Experience, ExperiencesBatch
-from .circular_buffer import CircularBuffer
-from ..utils.types import IntArray
+from ..utils.types import FloatArray, FloatLike, IntArray, IntLike
+from .replay_buffer import ReplayBuffer
 
 
-class PERBuffer:
+class PriorityBuffer:
+    def __init__(self, max_size: int) -> None:
+        self.max_size = int(max_size)
+        self.priorities = np.zeros(self.max_size, dtype=np.float32)
+        self.index = int(0)
+        self.size = int(0)
+
+    def add(self, priority: FloatLike):
+        self.priorities[self.index] = priority
+        self.index = (self.index + 1) % self.max_size
+        self.size = min(self.size + 1, self.max_size)
+
+    def set(self, index: IntLike, priority: FloatLike):
+        if index < 0 or index >= self.size:
+            raise IndexError(
+                f"Index {index} out of range for priority buffer of size {self.size}."
+            )
+        self.priorities[index] = priority
+
+    def to_array(self):
+        return self.priorities[: self.size]
+
+    def __getitem__(self, index: int) -> float:
+        return self.priorities[index]
+
+    def __setitem__(self, index: int, value: float) -> None:
+        self.priorities[index] = value
+
+
+class SimplePER(ReplayBuffer):
     """A class representing a prioritized replay buffer for storing experiences
     with TD errors priority based sampling.
     """
@@ -27,16 +56,14 @@ class PERBuffer:
             beta_annealing: The rate at which beta increases over time.
             min_priority: The minimum priority value for experiences.
         """
-        self.max_size = int(max_size)
+        super().__init__(max_size)
+
         self.alpha = float(alpha)
         self.beta = float(beta)
         self.beta_annealing = float(beta_annealing)
         self.min_priority = float(min_priority)
 
-        # Initialize priorities circular buffer
-        self.buffer = CircularBuffer(max_size=self.max_size)
-        self.ptr = int(0)
-        self.priorities = np.zeros(max_size, dtype=np.float32)
+        self.priorities = PriorityBuffer(max_size=self.max_size)
 
     @property
     def size(self) -> int:
@@ -51,11 +78,10 @@ class PERBuffer:
         """
         self.buffer.add(exp)
         priority = max(self.min_priority, td_error)
-        self.priorities[self.ptr] = priority
-        self.ptr = (self.ptr + 1) % self.max_size
+        self.priorities.add(priority)
 
     def add_batch(
-        self, batch: ExperiencesBatch, td_errors: np.ndarray | None = None
+        self, batch: ExperiencesBatch, td_errors: FloatArray | None = None
     ) -> None:
         """Add a batch of experiences to the replay buffer.
 
@@ -63,23 +89,19 @@ class PERBuffer:
             batch: A list of experiences to be added to the buffer.
             td_errors: The temporal difference errors for each experience.
         """
-        self.buffer.add_batch(batch)
+        super().add_batch(batch)
 
         if td_errors is None:
-            priority = np.ones(batch.size, dtype=np.float32)
+            priorities = np.ones(batch.size, dtype=np.float32)
         else:
-            priority = np.clip(td_errors, a_min=self.min_priority, a_max=None)
+            priorities = np.clip(td_errors, a_min=self.min_priority, a_max=None)
 
-        indices = np.arange(self.ptr, self.ptr + batch.size) % self.max_size
-        self.priorities[indices] = priority
-        self.ptr = (self.ptr + batch.size) % self.max_size
+        for p in priorities:
+            self.priorities.add(p)
 
     def get(self, index: int) -> Experience:
         """Return the experience at the given logical index."""
         return self.buffer.get(index)
-
-    def get_batch(self, indices: IntArray) -> ExperiencesBatch:
-        return self.buffer.get_batch(indices)
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
         """Sample a batch of experiences from the replay buffer with priority sampling.
@@ -90,11 +112,13 @@ class PERBuffer:
         Returns:
             A batch of sampled experiences.
         """
-        priorities = self.priorities[: self.size] ** self.alpha + self.min_priority
+        priorities = self.priorities.to_array()
+        priorities = priorities**self.alpha + self.min_priority
         probabilities = priorities / np.sum(priorities)
 
         indices = np.random.choice(self.size, size=batch_size, p=probabilities)
-        batch = self.buffer.get_batch(indices)
+        experiences = [self.buffer.get(i) for i in indices]
+        batch = ExperiencesBatch.from_experiences(experiences, indices)
 
         weights = (self.size * probabilities[indices]) ** -self.beta
         batch.weights = weights / weights.max()
@@ -103,16 +127,13 @@ class PERBuffer:
 
         return batch
 
-    def update_priorities(self, indices: np.ndarray, td_errors: np.ndarray) -> None:
+    def update_priorities(self, indices: IntArray, td_errors: FloatArray) -> None:
         """Update the priorities of experiences in the buffer based on new TD errors.
 
         Args:
             indices: The indices of the experiences whose priorities will be updated.
             td_errors: The new temporal difference errors used to update the priorities.
         """
-        self.priorities[indices] = np.clip(
-            td_errors, a_min=self.min_priority, a_max=None
-        )
-
-    def __len__(self) -> int:
-        return self.buffer.size
+        priorities = np.clip(td_errors, a_min=self.min_priority, a_max=None)
+        for i, p in zip(indices, priorities):
+            self.priorities.set(i, p)
