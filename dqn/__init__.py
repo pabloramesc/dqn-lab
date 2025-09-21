@@ -9,6 +9,6 @@ Usage:
 """
 
 from .dqn_agent import DQNAgent
-from .dqn_agent_per import DQNAgentPER
 from .experiences import Experience, ExperiencesBatch
 from .policies import BoltzmannPolicy, DecayType, EpsilonGreedyPolicy
+from .rainbow_dqn import RainbowDQN

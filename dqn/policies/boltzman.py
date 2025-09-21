@@ -71,7 +71,8 @@ class BoltzmannPolicy(ExplorationPolicy):
         else:
             raise ValueError(f"Not valid decay type '{self.decay_type}'.")
 
-    def get_dynamic_params(self) -> dict[str, float]:
+    @property
+    def dynamic_params(self) -> dict[str, float]:
         return {"tau": self.tau}
 
     def set_full_exploration(self) -> None:

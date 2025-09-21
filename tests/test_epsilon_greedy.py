@@ -69,7 +69,7 @@ def test_update_params_invalid_decay_type_raises():
 
 def test_get_dynamic_params():
     policy = EpsilonGreedyPolicy(epsilon=0.42)
-    params = policy.get_dynamic_params()
+    params = policy.dynamic_params
     assert isinstance(params, dict)
     assert params["epsilon"] == 0.42
 

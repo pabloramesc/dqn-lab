@@ -1,20 +1,22 @@
 import keras
 
-from .buffers import OptimizedPER
+from .buffers import NStepPER
 from .dqn_agent import DQNAgent
 from .experiences import ExperiencesBatch
 from .policies import ExplorationPolicy
 
+from typing import Optional
 
-class DQNAgentPER(DQNAgent):
+class RainbowDQN(DQNAgent):
     def __init__(
         self,
         model: keras.Model,
-        policy: ExplorationPolicy,
-        batch_size: int = 64,
-        memory_size: int = 10_000,
-        gamma: float = 0.95,
-        update_freq: int = 1000,
+        policy: Optional[ExplorationPolicy] = None,
+        batch_size: int = 32,
+        memory_size: int = 100_000,
+        update_freq: int = 10_000,
+        gamma: float = 0.99,
+        n_step: int = 3,
         alpha: float = 0.6,
         beta: float = 0.4,
         beta_annealing: float = 0.0,
@@ -27,8 +29,10 @@ class DQNAgentPER(DQNAgent):
             gamma=gamma,
             update_freq=update_freq,
         )
-        self.memory = OptimizedPER(
+        self.memory = NStepPER(
             max_size=memory_size,
+            n_step=n_step,
+            gamma=gamma,
             alpha=alpha,
             beta=beta,
             beta_annealing=beta_annealing,

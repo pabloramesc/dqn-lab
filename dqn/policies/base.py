@@ -48,7 +48,8 @@ class ExplorationPolicy(ABC):
         if steps < 1:
             raise ValueError("Steps must be greater than 0.")
 
-    def get_dynamic_params(self) -> dict[str, Any]:
+    @property
+    def dynamic_params(self) -> dict[str, Any]:
         """Return a dictionary with policy dynamic parameters."""
         return {}
 

@@ -33,7 +33,7 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
 
     def select_action(self, q_values: np.ndarray) -> int:
         num_actions = q_values.size
-        if np.random.rand() <= self.epsilon:
+        if np.random.rand() < self.epsilon:
             return np.random.choice(num_actions)
         action = np.argmax(q_values)
         return action.item()
@@ -74,7 +74,8 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
         else:
             raise ValueError(f"Not valid decay type '{self.decay_type}'.")
 
-    def get_dynamic_params(self) -> dict[str, float]:
+    @property
+    def dynamic_params(self) -> dict[str, float]:
         return {"epsilon": self.epsilon}
 
     def set_full_exploration(self) -> None:
@@ -85,4 +86,4 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
     def set_full_exploitation(self) -> None:
         """Force pure exploitation: greedy (argmax) selection."""
         self.decay_type = "fixed"
-        self.epsilon = 0.0
+        self.epsilon = self.epsilon_min

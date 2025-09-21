@@ -27,10 +27,9 @@ for episode in range(5):
         score += float(reward)
 
         if done or trunc:
-            print(
-                f"Episode: {episode+1} finished after {steps+1} steps with score {score}"
-            )
             break
+
+    print(f"Episode: {episode+1} finished after {steps+1} steps with score {score}")
 
 env.close()
 

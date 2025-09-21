@@ -34,7 +34,7 @@ class ReplayBuffer:
         self.buffer.add(exp)
 
     def add_batch(self, batch: ExperiencesBatch) -> None:
-        """Add a batch of experiences to the replay buffer.
+        """Add a batch of experiences from multiple agents to the replay buffer.
 
         Args:
             batch: A batch of experiences to be added to the buffer.

@@ -41,11 +41,11 @@ def update_q_table(state, action, reward, next_state):
 # %%
 # 💪 Training loop
 
-for episode in range(num_episodes):
+for episode in range(1, num_episodes + 1):
     state, _ = env.reset()
 
     score = 0
-    for step in range(max_steps):
+    for step in range(1, max_steps + 1):
         action = choose_action(state, epsilon)
         new_state, reward, done, truncated, info = env.step(action)
 
@@ -57,7 +57,10 @@ for episode in range(num_episodes):
         if done or truncated:
             break
 
-    print(f"Episode: {episode+1}, Steps: {step+1}, Score: {score}, Epsilon: {epsilon}")
+    if episode == 1 or episode % 1000 == 0:
+        print(
+            f"Episode: {episode}, Steps: {step}, Score: {score}, Epsilon: {epsilon:.4f}"
+        )
 
     epsilon = max(min_epsilon, epsilon * epsilon_decay)
 
@@ -70,7 +73,7 @@ env.close()
 env = gym.make("Taxi-v3", render_mode="human")
 
 for episode in range(5):
-    state, _ = env.reset()
+    state, info = env.reset()
 
     score = 0
     for step in range(max_steps):
@@ -83,10 +86,9 @@ for episode in range(5):
         score += reward
 
         if done or truncated:
-            print(
-                f"Episode: {episode+1} finished after {step+1} steps with score {score}"
-            )
             break
+
+    print(f"Episode: {episode+1} finished after {step+1} steps with score {score}")
 
 env.close()
 

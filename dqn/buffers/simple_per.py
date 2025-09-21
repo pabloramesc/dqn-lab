@@ -3,35 +3,7 @@ import numpy as np
 from ..experiences import Experience, ExperiencesBatch
 from ..utils.types import FloatArray, FloatLike, IntArray, IntLike
 from .replay_buffer import ReplayBuffer
-
-
-class PriorityBuffer:
-    def __init__(self, max_size: int) -> None:
-        self.max_size = int(max_size)
-        self.priorities = np.zeros(self.max_size, dtype=np.float32)
-        self.index = int(0)
-        self.size = int(0)
-
-    def add(self, priority: FloatLike):
-        self.priorities[self.index] = priority
-        self.index = (self.index + 1) % self.max_size
-        self.size = min(self.size + 1, self.max_size)
-
-    def set(self, index: IntLike, priority: FloatLike):
-        if index < 0 or index >= self.size:
-            raise IndexError(
-                f"Index {index} out of range for priority buffer of size {self.size}."
-            )
-        self.priorities[index] = priority
-
-    def to_array(self):
-        return self.priorities[: self.size]
-
-    def __getitem__(self, index: int) -> float:
-        return self.priorities[index]
-
-    def __setitem__(self, index: int, value: float) -> None:
-        self.priorities[index] = value
+from .numpy_buffer import NumpyBuffer
 
 
 class SimplePER(ReplayBuffer):
@@ -63,11 +35,7 @@ class SimplePER(ReplayBuffer):
         self.beta_annealing = float(beta_annealing)
         self.min_priority = float(min_priority)
 
-        self.priorities = PriorityBuffer(max_size=self.max_size)
-
-    @property
-    def size(self) -> int:
-        return self.buffer.size
+        self.priorities = NumpyBuffer(max_size=self.max_size)
 
     def add(self, exp: Experience, td_error: float = 1.0) -> None:
         """Add a single experience to the replay buffer.
@@ -76,14 +44,14 @@ class SimplePER(ReplayBuffer):
             exp: The experience to be added to the buffer.
             td_error: The temporal difference error for the experience.
         """
-        self.buffer.add(exp)
+        super().add(exp)
         priority = max(self.min_priority, td_error)
         self.priorities.add(priority)
 
     def add_batch(
         self, batch: ExperiencesBatch, td_errors: FloatArray | None = None
     ) -> None:
-        """Add a batch of experiences to the replay buffer.
+        """Add a batch of experiences from multiple agents to the replay buffer.
 
         Args:
             batch: A list of experiences to be added to the buffer.
@@ -94,14 +62,12 @@ class SimplePER(ReplayBuffer):
         if td_errors is None:
             priorities = np.ones(batch.size, dtype=np.float32)
         else:
-            priorities = np.clip(td_errors, a_min=self.min_priority, a_max=None)
+            priorities = np.clip(
+                td_errors, a_min=self.min_priority, a_max=None, dtype=np.float32
+            )
 
         for p in priorities:
             self.priorities.add(p)
-
-    def get(self, index: int) -> Experience:
-        """Return the experience at the given logical index."""
-        return self.buffer.get(index)
 
     def sample(self, batch_size: int) -> ExperiencesBatch:
         """Sample a batch of experiences from the replay buffer with priority sampling.

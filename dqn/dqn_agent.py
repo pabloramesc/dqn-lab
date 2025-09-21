@@ -1,10 +1,13 @@
+from typing import Optional
+
 import keras
 import numpy as np
 import tensorflow as tf
 
 from .buffers import ReplayBuffer
 from .experiences import Experience, ExperiencesBatch
-from .policies import ExplorationPolicy
+from .policies import EpsilonGreedyPolicy, ExplorationPolicy
+from .training import GymEnv, VectorEnv, evaluate_agent, train_agent, train_parallel
 
 
 class DQNAgent:
@@ -18,7 +21,7 @@ class DQNAgent:
     def __init__(
         self,
         model: keras.Model,
-        policy: ExplorationPolicy,
+        policy: Optional[ExplorationPolicy] = None,
         batch_size: int = 32,
         memory_size: int = 100_000,
         gamma: float = 0.99,
@@ -28,7 +31,8 @@ class DQNAgent:
 
         Args:
             model: Keras model used to approximate the Q-function.
-            policy: Exploration policy to use.
+            policy: Exploration policy to use. Default is epsilon-greedy policy
+                with linear decay from 1.0 to 0.01 over 1M updates.
             batch_size: Number of experiences per training batch.
             memory_size: Maximum number of experiences to store in the replay buffer.
             gamma: Discount factor for future rewards.
@@ -40,7 +44,9 @@ class DQNAgent:
             )
 
         self.set_model(model)
-        self.policy = policy
+        self.policy = policy or EpsilonGreedyPolicy(
+            epsilon=1.0, epsilon_min=0.01, epsilon_decay=1e-6, decay_type="fixed"
+        )
         self.batch_size = int(batch_size)
         self.memory = ReplayBuffer(memory_size)
         self.gamma = np.float32(gamma)
@@ -127,7 +133,10 @@ class DQNAgent:
             self.update_target_model()
 
         self.policy.update_params()
-
+        
+        # metrics["memory_size"] = self.memory.size
+        # metrics["train_steps"] = self.train_steps
+        # metrics.update(self.policy.dynamic_params)
         return metrics
 
     def _train_interface(self, batch: ExperiencesBatch) -> dict:
@@ -194,3 +203,12 @@ class DQNAgent:
 
         q_values = tf.tensor_scatter_nd_update(q_values, indices, q_target)
         return q_values, td_errors
+
+    def evaluate(self, env: GymEnv):
+        return evaluate_agent(env, self, render=True, verbose=True)
+
+    def learn(self, env: GymEnv, **kwargs):
+        return train_agent(env, self, **kwargs)
+
+    def learn_parallel(self, envs: VectorEnv, **kwargs):
+        return train_parallel(envs, self, **kwargs)

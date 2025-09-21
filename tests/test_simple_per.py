@@ -125,7 +125,8 @@ def test_update_priorities(buffer, experience):
     buffer.update_priorities(np.array([0, 1, 2]), new_td_errors)
 
     expected = np.clip(new_td_errors, a_min=buffer.min_priority, a_max=None)
-    assert np.allclose(buffer.priorities[:3], expected)
+    for i in range(3):
+        assert np.isclose(buffer.priorities[i], expected[i])
 
 
 def test_sampling_probability_distribution(buffer, experience):
