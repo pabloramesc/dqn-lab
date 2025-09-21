@@ -38,7 +38,10 @@ class NStepPER(OptimizedPER):
 
         # If this experience is terminal, flush n-step buffer
         if exp.done:
-            pass
+            while buffer:
+                n_step_exp = self._get_n_step_experience(buffer)
+                super().add(n_step_exp, td_error)
+                buffer.popleft()
 
     def add_batch(
         self,

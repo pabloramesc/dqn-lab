@@ -260,5 +260,6 @@ def print_progress(
     if metrics is not None:
         if (loss := metrics.get("loss")) is not None:
             parts.append(f"Loss: {loss:.4e}")
-
-    print(", ".join(parts), end=end)
+    
+    msg = ", ".join(parts) + "    "
+    print(msg, end=end)

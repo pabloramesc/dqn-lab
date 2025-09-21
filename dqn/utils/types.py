@@ -18,9 +18,9 @@ class SupportsBool(Protocol):
     def __bool__(self) -> bool: ...
 
 
-FloatLike = float | np.floating
-IntLike = int | np.integer
-BoolLike = bool | np.bool_
+FloatLike = Union[float, np.floating, SupportsFloat]
+IntLike = Union[int, np.integer, SupportsInt]
+BoolLike = Union[bool, np.bool_, SupportsBool]
 
 FloatArray = Union[NDArray[np.floating], Sequence[float]]
 IntArray = Union[NDArray[np.integer], Sequence[int]]
