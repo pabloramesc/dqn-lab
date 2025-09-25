@@ -7,7 +7,7 @@ import tensorflow as tf
 from .buffers import ReplayBuffer
 from .experiences import Experience, ExperiencesBatch
 from .policies import EpsilonGreedyPolicy, ExplorationPolicy
-from .training import GymEnv, VectorEnv, evaluate_agent, train_agent, train_parallel
+from .training import GymEnv, VectEnv, evaluate_agent, train_agent, train_parallel
 
 
 class DQNAgent:
@@ -210,5 +210,5 @@ class DQNAgent:
     def learn(self, env: GymEnv, **kwargs):
         return train_agent(env, self, **kwargs)
 
-    def learn_parallel(self, envs: VectorEnv, **kwargs):
+    def learn_parallel(self, envs: VectEnv, **kwargs):
         return train_parallel(envs, self, **kwargs)

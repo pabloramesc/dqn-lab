@@ -2,19 +2,32 @@ import time
 from typing import Any, Optional, Protocol, Tuple
 
 import numpy as np
-from gymnasium import Env
-from gymnasium.vector import VectorEnv
+from numpy.typing import NDArray
 from keras import Model
 
 from .buffers import ReplayBuffer
 from .experiences import Experience, ExperiencesBatch
 from .policies import ExplorationPolicy
 from .utils.formatting import format_time
+from .utils.types import IntLike
 
 
 class GymEnv(Protocol):
     def reset(self) -> Tuple[Any, dict]: ...
     def step(self, action: int) -> Tuple[Any, float, bool, bool, dict]: ...
+    def close(self) -> None: ...
+    def render(self) -> None: ...
+
+
+class VectEnv(Protocol):
+    num_envs: int
+
+    def reset(self) -> Tuple[NDArray, dict]: ...
+    def step(
+        self, actions: NDArray[np.integer]
+    ) -> Tuple[
+        NDArray, NDArray[np.floating], NDArray[np.bool_], NDArray[np.bool_], dict
+    ]: ...
     def close(self) -> None: ...
     def render(self) -> None: ...
 
@@ -152,7 +165,7 @@ def evaluate_agent(
 
 
 def train_parallel(
-    envs: VectorEnv,
+    envs: VectEnv,
     agent: RLAgent,
     min_memory: int = 10_000,
     train_every: int = 4,
@@ -225,8 +238,8 @@ def train_parallel(
 
 
 def print_progress(
-    episode: int,
-    steps: int,
+    episode: IntLike,
+    steps: IntLike,
     score: Optional[float] = None,
     lives: Optional[int] = None,
     agent: Optional[RLAgent] = None,
@@ -260,6 +273,6 @@ def print_progress(
     if metrics is not None:
         if (loss := metrics.get("loss")) is not None:
             parts.append(f"Loss: {loss:.4e}")
-    
+
     msg = ", ".join(parts) + "    "
     print(msg, end=end)
