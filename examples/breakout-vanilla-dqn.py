@@ -45,7 +45,7 @@ def create_model(state_shape: tuple[int, ...], num_actions: int) -> Model:
     )
 
     model.compile(
-        optimizer=Adam(learning_rate=0.00025, clipnorm=1.0),  # type: ignore
+        optimizer=Adam(learning_rate=0.00025),  # type: ignore
         loss=Huber(delta=1.0),
     )
 
@@ -66,7 +66,7 @@ num_actions = env.action_space.n  # type: ignore
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)  # type: ignore
-policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.01, epsilon_decay=1e-6)
+policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-6)
 agent = DQNAgent(
     model=model,
     batch_size=32,
@@ -97,6 +97,7 @@ agent.learn(
     train_every=4,
     max_score=1000,
     model_path=model_path,
+    autosave_freq=10_000,
     verbose=True,
 )
 

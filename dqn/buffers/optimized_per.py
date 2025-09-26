@@ -51,7 +51,10 @@ class OptimizedPER(SimplePER):
 
         total = self.sum_tree.total_priority
         if total <= 0.0:
-            raise ValueError("No ")
+            raise RuntimeError(
+                "Sum Tree not initialized. Total priority must be greater than 0."
+            )
+
         i = 0
         while i < batch_size:
             index, priority = self.sum_tree.sample()

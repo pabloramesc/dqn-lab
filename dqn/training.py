@@ -58,6 +58,7 @@ def train_agent(
     verbose: bool = True,
 ):
     metrics, train_t0 = None, None
+    total_steps = 0
     for episode in range(1, max_episodes + 1):
         state, info = env.reset()
 
@@ -71,12 +72,13 @@ def train_agent(
 
             state = next_state
             steps += 1
+            total_steps += 1
             terminated = done or trunc
 
             if max_episode_steps is not None and steps >= max_episode_steps:
                 terminated = True
 
-            if agent.memory.size > min_memory and steps % train_every == 0:
+            if agent.memory.size > min_memory and total_steps % train_every == 0:
                 metrics = agent.train()
 
             if train_t0 is None and agent.train_steps > 0:
@@ -85,14 +87,14 @@ def train_agent(
             if (
                 model_path is not None
                 and agent.train_steps > 0
-                and agent.train_steps % autosave_freq == 0
+                and total_steps % (autosave_freq * train_every) == 0
             ):
                 agent.model.save(filepath=model_path)
                 if verbose:
                     print(f"💾 Model saved to '{model_path}'. ")
 
             if verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
-                print_progress(
+                _print_progress(
                     episode=episode,
                     steps=steps,
                     score=info.get("score"),
@@ -151,7 +153,7 @@ def evaluate_agent(
                 terminated = True
 
             if verbose:
-                print_progress(
+                _print_progress(
                     episode=episode,
                     steps=steps,
                     score=info.get("score"),
@@ -175,6 +177,10 @@ def train_parallel(
     autosave_freq: int = 1000,
     verbose: bool = True,
 ):
+    _check_positive_params(
+        min_memory=min_memory, train_every=train_every, autosave_freq=autosave_freq
+    )
+
     num_envs = envs.num_envs
     if verbose:
         print(
@@ -207,16 +213,16 @@ def train_parallel(
         if (
             model_path is not None
             and agent.train_steps > 0
-            and agent.train_steps % autosave_freq == 0
+            and steps % (autosave_freq * train_every) == 0
         ):
             agent.model.save(filepath=model_path)
             print(f"💾 Model saved to '{model_path}'. ")
 
         if verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
-            print_progress(
+            _print_progress(
                 episode=episodes,
                 steps=steps,
-                score=np.mean(scores),
+                score=np.mean(scores) if not terminated else np.max(scores),
                 lives=None,
                 agent=agent,
                 train_t0=train_t0,
@@ -237,7 +243,13 @@ def train_parallel(
     print("✅ Training finished.")
 
 
-def print_progress(
+def _check_positive_params(**kwargs):
+    for param, value in kwargs.items():
+        if value <= 0:
+            raise ValueError(f"{param} must be greater than 0")
+
+
+def _print_progress(
     episode: IntLike,
     steps: IntLike,
     score: Optional[float] = None,

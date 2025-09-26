@@ -126,3 +126,43 @@ def test_flush_empty_buffer_does_not_crash(buffer):
     buffer.flush()  # should not raise
     buffer.flush(agent_id=0)  # should also not raise
     assert buffer.size == 0
+
+
+def test_buffer_flush_after_terminal_experience(buffer):
+    """After adding a terminal experience, the agent's n-step buffer should be emptied."""
+    # Add two steps, no done yet
+    buffer.add(make_exp(1), agent_id=0)
+    buffer.add(make_exp(2), agent_id=0)
+
+    # Internally the agent's n-step buffer should still hold two items
+    assert len(buffer.n_step_buffers[0]) == 2
+
+    # Add a terminal experience
+    buffer.add(make_exp(3, done=True), agent_id=0)
+
+    # After terminal, the n-step buffer for agent 0 should now be empty
+    assert len(buffer.n_step_buffers[0]) == 0
+    # And at least one experience should have been flushed into the PER
+    assert buffer.size >= 1
+    last_exp = buffer.buffer.get(buffer.size - 1)
+    assert last_exp.done is True
+
+
+def test_multiple_agents_flush_after_terminal_experience(buffer):
+    """Each agent's buffer resets independently after terminal experiences."""
+    # Agent 0: two non-terminal steps
+    buffer.add(make_exp(1), agent_id=0)
+    buffer.add(make_exp(2), agent_id=0)
+    # Agent 1: one non-terminal step
+    buffer.add(make_exp(10), agent_id=1)
+
+    assert len(buffer.n_step_buffers[0]) == 2
+    assert len(buffer.n_step_buffers[1]) == 1
+
+    # Add a terminal experience for agent 0 only
+    buffer.add(make_exp(3, done=True), agent_id=0)
+
+    # Agent 0 buffer should now be empty
+    assert len(buffer.n_step_buffers[0]) == 0
+    # Agent 1 buffer should be untouched
+    assert len(buffer.n_step_buffers[1]) == 1

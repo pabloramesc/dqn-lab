@@ -64,7 +64,7 @@ def create_model(state_shape: tuple[int, ...], num_actions: int) -> Model:
     q = DuelingHead(dtype="float32")([v, a])
 
     model = Model(inputs=inputs, outputs=q)
-    model.compile(optimizer=Adam(learning_rate=0.00025), loss=Huber(delta=1.0))  # type: ignore
+    model.compile(optimizer=Adam(learning_rate=0.0000625, epsilon=1.5e-4), loss=Huber(delta=1.0))  # type: ignore
     return model
 
 
@@ -90,7 +90,7 @@ num_actions = envs.single_action_space.n  # type: ignore
 
 # Create the DQN agent
 model = create_model(state_shape, num_actions)  # type: ignore
-policy = EpsilonGreedyPolicy(epsilon_min=0.01, epsilon_decay=1e-5, decay_type="linear")
+policy = EpsilonGreedyPolicy(epsilon_min=0.1, epsilon_decay=1e-5, decay_type="linear")
 agent = RainbowDQN(
     model=model,
     policy=policy,
@@ -122,12 +122,13 @@ model.summary()  # type: ignore
 # %%
 # 💪 Training using vectorized environments (faster ⚡)
 agent.learn_parallel(
-    envs,
+    envs, # type: ignore
     max_episodes=1_000_000,
     min_memory=50_000,
     train_every=1,  # train every step
     max_score=1000,
     model_path=model_path,
+    autosave_freq=10_000,
     verbose=True,
 )
 
