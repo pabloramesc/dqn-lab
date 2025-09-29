@@ -202,7 +202,8 @@ def train_parallel(
         steps += 1
         episodes += np.sum(dones)
         scores = infos.get("score", np.zeros(num_envs))
-        terminated = np.any(dones) or np.any(truncs)
+        terminations = dones | truncs
+        terminated = np.any(terminations)
 
         if agent.memory.size > min_memory and steps % train_every == 0:
             metrics = agent.train()
@@ -219,10 +220,11 @@ def train_parallel(
             print(f"💾 Model saved to '{model_path}'. ")
 
         if verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
+            _scores = scores if not terminated else scores[terminations]
             _print_progress(
                 episode=episodes,
                 steps=steps,
-                score=np.mean(scores) if not terminated else np.max(scores),
+                score=np.mean(_scores),
                 lives=None,
                 agent=agent,
                 train_t0=train_t0,

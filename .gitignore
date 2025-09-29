@@ -177,7 +177,7 @@ cython_debug/
 .vscode
 
 # Keras models
-models
+# models
 *.keras
 
 # Drafts folder

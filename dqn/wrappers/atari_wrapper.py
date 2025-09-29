@@ -26,8 +26,8 @@ class AtariWrapper(gym.Wrapper):
         clip_reward: bool = True,
         life_penalty: bool = True,
     ):
-        self.life_penalty = life_penalty
         self.clip_reward = clip_reward
+        self.life_penalty = life_penalty
 
         self.lives = 0
         self.score = 0.0

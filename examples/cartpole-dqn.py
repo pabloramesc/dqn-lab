@@ -24,6 +24,7 @@ for episode in range(5):
         new_state, reward, done, trunc, info = env.step(action)
 
         state = new_state
+        steps += 1
         score += float(reward)
 
         if done or trunc:
@@ -71,7 +72,7 @@ agent = DQNAgent(
 )
 
 # Load pre-trained model if it exists
-model_path = "models/cartpole-model.keras"
+model_path = "models/cartpole-dqn.keras"
 
 if os.path.exists(model_path):
     model = keras.models.load_model(filepath=model_path, compile=True)
