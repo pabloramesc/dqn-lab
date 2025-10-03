@@ -1,16 +1,21 @@
-from typing import Tuple, Union, Any
+from typing import Tuple, Union, Any, TypeVar, Generic
 
 import numpy as np
 from numpy.typing import NDArray
 
+T = TypeVar("T", bound=np.generic)
 
-class NumpyBuffer:
+
+class NumpyBuffer(Generic[T]):
     """
     Fixed-size circular buffer for storing NumPy arrays of arbitrary shape and dtype.
     """
 
     def __init__(
-        self, max_size: int, shape: Union[int, Tuple[int, ...]] = (), dtype=np.float32
+        self,
+        max_size: int,
+        shape: Union[int, Tuple[int, ...]] = (),
+        dtype: type[T] = np.float32,
     ) -> None:
         """
         Initialize a NumpyBuffer.
@@ -24,7 +29,9 @@ class NumpyBuffer:
         self._shape = shape if isinstance(shape, tuple) else (shape,)
         self._dtype = dtype
 
-        self._buffer = np.zeros((self._max_size, *self._shape), dtype=self._dtype)
+        self._buffer: NDArray[T] = np.zeros(
+            (self._max_size, *self._shape), dtype=self._dtype
+        )
         self._index = 0
         self._size = 0
 
@@ -67,7 +74,7 @@ class NumpyBuffer:
         self._index = (self._index + 1) % self._max_size
         self._size = min(self._size + 1, self._max_size)
 
-    def get(self, index: int) -> NDArray:
+    def get(self, index: int) -> NDArray[T]:
         """Get an element from the buffer.
 
         Args:
@@ -99,7 +106,7 @@ class NumpyBuffer:
             raise ValueError(f"Expected shape {self._shape}, got {item.shape}")
         self._buffer[index] = item
 
-    def to_array(self) -> NDArray:
+    def to_array(self) -> NDArray[T]:
         """Return all buffer contents as a contiguous array from oldest to newest.
 
         Returns:
@@ -108,7 +115,9 @@ class NumpyBuffer:
         if not self.is_full:
             return self._buffer[: self._size].copy()
         return np.concatenate(
-            (self._buffer[self._index :], self._buffer[: self._index]), axis=0
+            (self._buffer[self._index :], self._buffer[: self._index]),
+            axis=0,
+            dtype=self._dtype,
         )
 
     def _resolve_index(self, index: int) -> int:
@@ -126,14 +135,14 @@ class NumpyBuffer:
 
         return index
 
-    def _process_item(self, item: Any) -> NDArray:
+    def _process_item(self, item: Any) -> NDArray[T]:
         item = np.asarray(item, dtype=self._dtype)
         if item.shape != self._shape:
             raise ValueError(f"Expected shape {self._shape}, got {item.shape}")
         return item
 
-    def __getitem__(self, index: int) -> NDArray:
+    def __getitem__(self, index: int) -> NDArray[T]:
         return self.get(index)
 
-    def __setitem__(self, index: int, value: NDArray) -> None:
+    def __setitem__(self, index: int, value: NDArray[T]) -> None:
         self.set(index, value)

@@ -48,56 +48,62 @@ class RLAgent(Protocol):
 def train_agent(
     env: GymEnv,
     agent: RLAgent,
-    min_memory: int = 10_000,
-    train_every: int = 4,
+    min_memory: int = 1000,
+    train_every: int = 1,
     max_episodes: int = 1000,
     max_episode_steps: Optional[int] = None,
     max_score: Optional[float] = None,
     model_path: Optional[str] = None,
-    autosave_freq: int = 1000,
-    verbose: bool = True,
+    autosave_freq: int = 0,
+    verbose: int = 1,
 ):
     metrics, train_t0 = None, None
-    total_steps = 0
+    total_steps, last_autosave_step = 0, 0
     for episode in range(1, max_episodes + 1):
         state, info = env.reset()
 
-        steps, terminated = 0, False
+        steps, score, terminated = 0, 0.0, False
         while not terminated:
             action = agent.act(state)
-            next_state, reward, done, trunc, info = env.step(action)
+            next_state, reward, done, truncated, info = env.step(action)
 
-            exp = Experience(state, action, next_state, reward, done)
+            exp = Experience(state, action, next_state, reward, done, truncated)
             agent.add_experience(exp)
 
-            state = next_state
+            state = next_state if next_state is not None else state
             steps += 1
             total_steps += 1
-            terminated = done or trunc
+            terminated = done or truncated
 
-            if max_episode_steps is not None and steps >= max_episode_steps:
-                terminated = True
+            if "score" in info:
+                score = info["score"]
+            else:
+                score += reward
 
             if agent.memory.size > min_memory and total_steps % train_every == 0:
                 metrics = agent.train()
 
-            if train_t0 is None and agent.train_steps > 0:
-                train_t0 = time.time()
+            if max_episode_steps is not None and steps >= max_episode_steps:
+                terminated = True
 
             if (
-                model_path is not None
-                and agent.train_steps > 0
-                and total_steps % (autosave_freq * train_every) == 0
+                autosave_freq > 0
+                and model_path is not None
+                and agent.train_steps > last_autosave_step + autosave_freq
             ):
+                last_autosave_step = agent.train_steps
                 agent.model.save(filepath=model_path)
                 if verbose:
                     print(f"💾 Model saved to '{model_path}'. ")
+
+            if verbose > 1 and train_t0 is None and agent.train_steps > 0:
+                train_t0 = time.time()
 
             if verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
                 _print_progress(
                     episode=episode,
                     steps=steps,
-                    score=info.get("score"),
+                    score=score,
                     lives=info.get("lives"),
                     agent=agent,
                     train_t0=train_t0,
@@ -137,7 +143,7 @@ def evaluate_agent(
         state, info = env.reset()
         state, reward, done, trunc, info = env.step(init_action)
 
-        steps, score, terminated = 0, 0, False
+        steps, score, terminated = 0, 0.0, False
         while not terminated:
             if render:
                 env.render()
@@ -149,6 +155,11 @@ def evaluate_agent(
             score += reward
             terminated = done or trunc
 
+            if "score" in info:
+                score = info["score"]
+            else:
+                score += reward
+
             if max_steps is not None and steps >= max_steps:
                 terminated = True
 
@@ -156,7 +167,7 @@ def evaluate_agent(
                 _print_progress(
                     episode=episode,
                     steps=steps,
-                    score=info.get("score"),
+                    score=score,
                     lives=info.get("lives"),
                     end="\n" if terminated else "\r",
                 )
@@ -272,9 +283,6 @@ def _print_progress(
     if agent is not None:
         parts.append(f"Memory size: {agent.memory.size}")
 
-        if (epsilon := getattr(agent.policy, "epsilon", None)) is not None:
-            parts.append(f"Epsilon: {epsilon:.4f}")
-
         if (train_steps := agent.train_steps) > 0:
             parts.append(f"Train steps: {train_steps}")
 
@@ -283,6 +291,9 @@ def _print_progress(
             parts.append(f"Train time: {format_time(elapsed)}")
             speed = train_steps / elapsed if elapsed > 0 else 0.0
             parts.append(f"Train speed: {speed:.0f} sps")
+
+        if (epsilon := getattr(agent.policy, "epsilon", None)) is not None:
+            parts.append(f"Epsilon: {epsilon:.4f}")
 
     if metrics is not None:
         if (loss := metrics.get("loss")) is not None:

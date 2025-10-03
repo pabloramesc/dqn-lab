@@ -45,7 +45,7 @@ class SimplePER(ReplayBuffer):
             td_error: The temporal difference error for the experience.
         """
         super().add(exp)
-        priority = max(self.min_priority, td_error)
+        priority = abs(td_error) + self.min_priority
         self.priorities.add(priority)
 
     def add_batch(
@@ -60,11 +60,9 @@ class SimplePER(ReplayBuffer):
         super().add_batch(batch)
 
         if td_errors is None:
-            priorities = np.ones(batch.size, dtype=np.float32)
-        else:
-            priorities = np.clip(
-                td_errors, a_min=self.min_priority, a_max=None, dtype=np.float32
-            )
+            td_errors = np.ones(batch.size)
+
+        priorities = np.abs(td_errors) + self.min_priority
 
         for p in priorities:
             self.priorities.add(p)
@@ -78,8 +76,7 @@ class SimplePER(ReplayBuffer):
         Returns:
             A batch of sampled experiences.
         """
-        priorities = self.priorities.to_array()
-        priorities = priorities**self.alpha + self.min_priority
+        priorities = self.priorities.to_array() ** self.alpha
         probabilities = priorities / np.sum(priorities)
 
         indices = np.random.choice(self.size, size=batch_size, p=probabilities)
@@ -100,6 +97,6 @@ class SimplePER(ReplayBuffer):
             indices: The indices of the experiences whose priorities will be updated.
             td_errors: The new temporal difference errors used to update the priorities.
         """
-        priorities = np.clip(td_errors, a_min=self.min_priority, a_max=None)
+        priorities = np.abs(td_errors) + self.min_priority
         for i, p in zip(indices, priorities):
             self.priorities.set(i, p)

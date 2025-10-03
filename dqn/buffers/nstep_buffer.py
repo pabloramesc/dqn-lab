@@ -1,4 +1,5 @@
 from collections import deque
+from tkinter import N
 
 from dqn.experiences import Experience, ExperiencesBatch
 
@@ -59,7 +60,7 @@ class NStepPER(OptimizedPER):
             super().add(n_step_exp, td_error)
 
         # If this experience is terminal, flush n-step buffer
-        if exp.done:
+        if exp.done or exp.truncated:
             self.flush(agent_id, td_error)
 
     def add_batch(
@@ -69,9 +70,9 @@ class NStepPER(OptimizedPER):
         agent_ids: IntArray | None = None,
     ) -> None:
         """Add a batch of experiences from different agents to the buffer.
-        
+
         - If `agent_ids` is provided, each entry is assigned to the corresponding
-        agent's buffer.        
+        agent's buffer.
         - If `agent_ids` is `None`, the agent IDs are generated automatically as
         [0, 1, ..., N-1], where N is the number of experiences in the batch.
 

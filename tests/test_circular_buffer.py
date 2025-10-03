@@ -100,3 +100,47 @@ def test_to_list_full_wraparound(buffer):
     for i in range(buffer._max_size):
         expected = {"value": i + 2}  # last items added
         assert l[i] == expected
+
+
+def test_get_physical_basic(buffer):
+    """Direct slot indexing should return the item at the physical slot."""
+    # Add 3 items
+    for i in range(3):
+        buffer.add({"value": i})
+    # Direct physical index 0..size-1 should match underlying buffer order
+    for i in range(3):
+        item = buffer.get_physical(i)
+        assert item == {"value": i}
+
+
+def test_get_physical_with_overwrite(buffer):
+    """After wrap-around, physical index should still point to correct slot."""
+    max_size = buffer._max_size
+    # Fill buffer fully
+    for i in range(max_size):
+        buffer.add({"value": i})
+    # Overwrite first two slots
+    for i in range(max_size, max_size + 2):
+        buffer.add({"value": i})
+    # Now check physical slots directly
+    for slot in range(max_size):
+        item = buffer.get_physical(slot)
+        # We can compute the expected value directly from the internal buffer
+        # because get_physical should just return that slot:
+        expected = buffer._buffer[slot]
+        assert item == expected
+
+
+def test_get_physical_out_of_range(buffer):
+    """get_physical should raise IndexError for invalid physical indices."""
+    with pytest.raises(IndexError):
+        buffer.get_physical(0)  # empty buffer
+    buffer.add({"value": 1})
+    with pytest.raises(IndexError):
+        buffer.get_physical(-1)
+    with pytest.raises(IndexError):
+        buffer.get_physical(buffer._max_size)  # beyond capacity
+    # fill partially, but access unfilled slot
+    # for example capacity=5, size=1, physical slot 3 not yet used
+    with pytest.raises(IndexError):
+        buffer.get_physical(3)

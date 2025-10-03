@@ -204,8 +204,8 @@ class DQNAgent:
         q_values = tf.tensor_scatter_nd_update(q_values, indices, q_target)
         return q_values, td_errors
 
-    def evaluate(self, env: GymEnv):
-        return evaluate_agent(env, self, render=True, verbose=True)
+    def evaluate(self, env: GymEnv, **kwargs):
+        return evaluate_agent(env, self, render=True, verbose=True, **kwargs)
 
     def learn(self, env: GymEnv, **kwargs):
         return train_agent(env, self, **kwargs)

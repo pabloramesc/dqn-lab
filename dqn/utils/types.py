@@ -5,10 +5,12 @@ from typing import (
     SupportsInt,
     Union,
     runtime_checkable,
+    Optional,
+    TypeVar,
 )
 
 import numpy as np
-from numpy.typing import NDArray
+from numpy.typing import NDArray, ArrayLike
 
 
 @runtime_checkable
@@ -25,3 +27,12 @@ BoolLike = Union[bool, np.bool_, SupportsBool]
 FloatArray = Union[NDArray[np.floating], Sequence[float]]
 IntArray = Union[NDArray[np.integer], Sequence[int]]
 BoolArray = Union[NDArray[np.bool_], Sequence[bool]]
+
+
+T = TypeVar("T", bound=np.generic)
+
+
+def to_optional_array(x: Optional[ArrayLike], dtype: type[T]) -> NDArray[T] | None:
+    if x is None:
+        return None
+    return np.asarray(x, dtype=dtype)

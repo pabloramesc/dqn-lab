@@ -64,7 +64,7 @@ def create_model(state_shape: tuple[int, ...], num_actions: int) -> Model:
     q = DuelingHead(dtype="float32")([v, a])
 
     model = Model(inputs=inputs, outputs=q)
-    model.compile(optimizer=Adam(learning_rate=0.0000625, epsilon=1.5e-4), loss=Huber(delta=1.0))  # type: ignore
+    model.compile(optimizer=Adam(learning_rate=3e-4), loss=Huber(delta=1.0))  # type: ignore
     return model
 
 
@@ -95,7 +95,7 @@ agent = RainbowDQN(
     model=model,
     policy=policy,
     batch_size=32,
-    memory_size=500_000,
+    memory_size=200_000,
     update_freq=10_000,
     gamma=0.99,
     n_step=3,
@@ -122,7 +122,7 @@ model.summary()  # type: ignore
 # %%
 # 💪 Training using vectorized environments (faster ⚡)
 agent.learn_parallel(
-    envs, # type: ignore
+    envs,  # type: ignore
     max_episodes=1_000_000,
     min_memory=50_000,
     train_every=1,  # train every step

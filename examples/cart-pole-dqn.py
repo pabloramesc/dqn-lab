@@ -53,12 +53,12 @@ def create_model(state_shape: tuple[int, ...], num_actions: int) -> Model:
 # Initialize state and action space dimensions
 env = gym.make("CartPole-v1")
 state_shape = env.observation_space.shape
-num_actions = env.action_space.n
+num_actions = env.action_space.n # type: ignore
 
 # Create the DQN agent
-from dqn import DQNAgent, EpsilonGreedyPolicy, Experience
+from dqn import DQNAgent,  EpsilonGreedyPolicy, Experience
 
-model = create_model(state_shape, num_actions)
+model = create_model(state_shape, num_actions) # type: ignore
 policy = EpsilonGreedyPolicy(
     decay_type="exponential", epsilon_min=0.01, epsilon_decay=0.9995
 )
@@ -72,15 +72,15 @@ agent = DQNAgent(
 )
 
 # Load pre-trained model if it exists
-model_path = "models/cartpole-dqn.keras"
+model_path = "models/cart-pole-dqn.keras"
 
 if os.path.exists(model_path):
     model = keras.models.load_model(filepath=model_path, compile=True)
-    agent.set_model(model)
+    agent.set_model(model) # type: ignore
     policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
-model.summary()
+model.summary() # type: ignore
 
 
 # %%
@@ -97,12 +97,12 @@ for episode in range(max_episodes):
         action = agent.act(state)  # Choose action based on policy
         new_state, reward, done, trunc, info = env.step(action)
 
-        exp = Experience(state, action, new_state, reward, done)
+        exp = Experience(state, action, new_state, reward, done) # type: ignore
         agent.add_experience(exp)
         state = new_state
 
         steps += 1
-        score += reward
+        score += float(reward)
         terminated = done or trunc
 
         # Train when enough experiences in buffer and each few steps
@@ -158,7 +158,7 @@ for episode in range(5):  # Test for 5 episodes
         state = new_state
 
         steps += 1
-        score += reward
+        score += float(reward)
         terminated = done or trunc
 
         if terminated:

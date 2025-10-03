@@ -86,4 +86,4 @@ class EpsilonGreedyPolicy(ExplorationPolicy):
     def set_full_exploitation(self) -> None:
         """Force pure exploitation: greedy (argmax) selection."""
         self.decay_type = "fixed"
-        self.epsilon = self.epsilon_min
+        self.epsilon = 0.0

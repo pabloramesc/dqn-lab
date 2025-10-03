@@ -1,9 +1,18 @@
+from os import truncate
 from typing import NamedTuple, Optional, Sequence
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
 
-from .utils.types import FloatArray, IntArray, BoolArray, FloatLike, IntLike, BoolLike
+from .utils.types import (
+    FloatArray,
+    IntArray,
+    BoolArray,
+    FloatLike,
+    IntLike,
+    BoolLike,
+    to_optional_array,
+)
 
 
 class Experience(NamedTuple):
@@ -14,6 +23,7 @@ class Experience(NamedTuple):
     next_state: NDArray
     reward: float
     done: bool
+    truncated: bool = False
 
     @classmethod
     def create(
@@ -23,6 +33,7 @@ class Experience(NamedTuple):
         next_state: ArrayLike,
         reward: FloatLike,
         done: BoolLike,
+        truncated: Optional[BoolLike] = False,
     ):
         """Factory method to enforce type conversion and check state consistency."""
         state = np.asarray(state)
@@ -40,6 +51,7 @@ class Experience(NamedTuple):
             next_state=next_state,
             reward=float(reward),
             done=bool(done),
+            truncated=bool(truncated),
         )
 
 
@@ -55,18 +67,16 @@ class ExperiencesBatch:
         dones: BoolArray,
         indices: Optional[IntArray] = None,
         weights: Optional[FloatArray] = None,
+        truncated: Optional[BoolArray] = None,
     ):
         self.states = np.asarray(states)
         self.actions = np.asarray(actions, dtype=np.int32)
         self.next_states = np.asarray(next_states)
         self.rewards = np.asarray(rewards, dtype=np.float32)
         self.dones = np.asarray(dones, dtype=np.bool_)
-        self.indices = (
-            np.asarray(indices, dtype=np.int32) if indices is not None else None
-        )
-        self.weights = (
-            np.asarray(weights, dtype=np.float32) if weights is not None else None
-        )
+        self.indices = to_optional_array(indices, dtype=np.int32)
+        self.weights = to_optional_array(weights, dtype=np.float32)
+        self.truncated = to_optional_array(truncated, dtype=np.bool_)
         self._check_consistency()
 
     @property
@@ -76,6 +86,10 @@ class ExperiencesBatch:
 
     def to_experiences(self) -> list[Experience]:
         """Convert the batch to a list of `Experience` objects."""
+        truncs = self.truncated
+        if truncs is None:
+            truncs = np.zeros(shape=self.size, dtype=np.bool_)
+
         experiences = [
             Experience.create(
                 state=self.states[i],
@@ -83,9 +97,11 @@ class ExperiencesBatch:
                 next_state=self.next_states[i],
                 reward=self.rewards[i],
                 done=self.dones[i],
+                truncated=truncs[i],
             )
             for i in range(self.size)
         ]
+
         return experiences
 
     @classmethod
@@ -93,8 +109,8 @@ class ExperiencesBatch:
         cls, experiences: Sequence[Experience], indices: Optional[IntArray] = None
     ):
         """Create an ExperiencesBatch from a list of Experience objects."""
-        states, actions, next_states, rewards, dones = zip(*experiences)
-        return cls(states, actions, next_states, rewards, dones, indices)  # type: ignore
+        states, actions, next_states, rewards, dones, truncated = zip(*experiences)
+        return cls(states, actions, next_states, rewards, dones, indices=indices, truncated=truncated)  # type: ignore
 
     def _check_consistency(self):
         if self.states.shape != self.next_states.shape:
@@ -108,6 +124,7 @@ class ExperiencesBatch:
             "Dones": self.dones,
             "Indices": self.indices,
             "Weights": self.weights,
+            "Truncated": self.truncated,
         }
 
         for name, arr in arrays_1d.items():
