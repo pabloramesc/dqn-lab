@@ -1,11 +1,14 @@
 import time
+from dataclasses import dataclass
+from tkinter import N
+from tkinter.tix import Tree
 from typing import Any, Optional, Protocol, Tuple
 
 import numpy as np
-from numpy.typing import NDArray
 from keras import Model
+from numpy.typing import NDArray
 
-from .buffers import ReplayBuffer
+from .buffers import ReplayBuffer, NumpyBuffer
 from .experiences import Experience, ExperiencesBatch
 from .policies import ExplorationPolicy
 from .utils.formatting import format_time
@@ -39,30 +42,42 @@ class RLAgent(Protocol):
     train_steps: int
 
     def act(self, state: Any) -> int: ...
-    def act_on_batch(self, states: Any) -> np.ndarray: ...
+    def act_on_batch(self, states: Any, training: bool = True) -> np.ndarray: ...
     def add_experience(self, exp: Experience) -> None: ...
     def add_experiences_batch(self, batch: ExperiencesBatch) -> None: ...
     def train(self) -> dict | None: ...
 
 
+@dataclass
+class TrainConfig:
+    min_memory: int = 1000
+    train_every: int = 1
+    max_episodes: int = 1000
+    max_episode_steps: Optional[int] = None
+    max_score: Optional[float] = None
+    model_path: Optional[str] = None
+    autosave_freq: int = 0
+    verbose: int = 1
+    score_window: int = 100
+
+
 def train_agent(
     env: GymEnv,
     agent: RLAgent,
-    min_memory: int = 1000,
-    train_every: int = 1,
-    max_episodes: int = 1000,
-    max_episode_steps: Optional[int] = None,
-    max_score: Optional[float] = None,
-    model_path: Optional[str] = None,
-    autosave_freq: int = 0,
-    verbose: int = 1,
+    config: Optional[TrainConfig] = None,
+    **kwargs,
 ):
+    cfg = config or TrainConfig(**kwargs)
+
     metrics, train_t0 = None, None
     total_steps, last_autosave_step = 0, 0
-    for episode in range(1, max_episodes + 1):
-        state, info = env.reset()
+    episode_scores = NumpyBuffer(max_size=cfg.score_window)
+    avg_score = 0.0
 
+    for episode in range(1, cfg.max_episodes + 1):
+        state, info = env.reset()
         steps, score, terminated = 0, 0.0, False
+
         while not terminated:
             action = agent.act(state)
             next_state, reward, done, truncated, info = env.step(action)
@@ -70,40 +85,45 @@ def train_agent(
             exp = Experience(state, action, next_state, reward, done, truncated)
             agent.add_experience(exp)
 
-            state = next_state if next_state is not None else state
+            state = next_state
             steps += 1
             total_steps += 1
             terminated = done or truncated
 
-            if "score" in info:
-                score = info["score"]
-            else:
-                score += reward
+            score = info.get("score", score + reward)
 
-            if agent.memory.size > min_memory and total_steps % train_every == 0:
+            if terminated:
+                episode_scores.add(score)
+                avg_score = episode_scores.to_array().mean()
+
+            if (
+                agent.memory.size > cfg.min_memory
+                and total_steps % cfg.train_every == 0
+            ):
                 metrics = agent.train()
 
-            if max_episode_steps is not None and steps >= max_episode_steps:
+            if cfg.max_episode_steps is not None and steps >= cfg.max_episode_steps:
                 terminated = True
 
             if (
-                autosave_freq > 0
-                and model_path is not None
-                and agent.train_steps > last_autosave_step + autosave_freq
+                cfg.autosave_freq > 0
+                and cfg.model_path is not None
+                and agent.train_steps > last_autosave_step + cfg.autosave_freq
             ):
                 last_autosave_step = agent.train_steps
-                agent.model.save(filepath=model_path)
-                if verbose:
-                    print(f"💾 Model saved to '{model_path}'. ")
+                agent.model.save(filepath=cfg.model_path)
+                if cfg.verbose:
+                    print(f"💾 Model saved to '{cfg.model_path}'. ")
 
-            if verbose > 1 and train_t0 is None and agent.train_steps > 0:
+            if cfg.verbose > 1 and train_t0 is None and agent.train_steps > 0:
                 train_t0 = time.time()
 
-            if verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
+            if cfg.verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
                 _print_progress(
                     episode=episode,
                     steps=steps,
                     score=score,
+                    avg_score=avg_score,
                     lives=info.get("lives"),
                     agent=agent,
                     train_t0=train_t0,
@@ -111,16 +131,16 @@ def train_agent(
                     end="\n" if terminated else "\r",
                 )
 
-        score = info.get("score", 0)
-        if max_score is not None and score >= max_score:
+        score = info.get("score", 0.0)
+        if cfg.max_score is not None and score >= cfg.max_score:
             print("🏆 Max score reached. Stopping training.")
             break
 
     env.close()
 
-    if model_path is not None:
-        agent.model.save(filepath=model_path)
-        print(f"💾 Model saved to '{model_path}'. ")
+    if cfg.model_path is not None:
+        agent.model.save(filepath=cfg.model_path)
+        print(f"💾 Model saved to '{cfg.model_path}'. ")
 
     print("✅ Training finished.")
 
@@ -155,10 +175,7 @@ def evaluate_agent(
             score += reward
             terminated = done or trunc
 
-            if "score" in info:
-                score = info["score"]
-            else:
-                score += reward
+            score = info.get("score", score + reward)
 
             if max_steps is not None and steps >= max_steps:
                 terminated = True
@@ -180,20 +197,19 @@ def evaluate_agent(
 def train_parallel(
     envs: VectEnv,
     agent: RLAgent,
-    min_memory: int = 10_000,
-    train_every: int = 4,
-    max_episodes: int = 1000,
-    max_score: Optional[float] = None,
-    model_path: Optional[str] = None,
-    autosave_freq: int = 1000,
-    verbose: bool = True,
+    config: Optional[TrainConfig] = None,
+    **kwargs,
 ):
+    cfg = config or TrainConfig(**kwargs)
+
     _check_positive_params(
-        min_memory=min_memory, train_every=train_every, autosave_freq=autosave_freq
+        min_memory=cfg.min_memory,
+        train_every=cfg.train_every,
+        autosave_freq=cfg.autosave_freq,
     )
 
     num_envs = envs.num_envs
-    if verbose:
+    if cfg.verbose:
         print(
             f"Initiating parallel training with {num_envs} vectorized environments..."
         )
@@ -202,11 +218,15 @@ def train_parallel(
 
     episodes, steps = 0, 0
     metrics, train_t0 = None, None
-    while episodes < max_episodes:
-        actions = agent.act_on_batch(states)
+    episode_scores = NumpyBuffer(max_size=cfg.score_window)
+
+    while episodes < cfg.max_episodes:
+        actions = agent.act_on_batch(states, training=True)
         next_states, rewards, dones, truncs, infos = envs.step(actions)
 
-        batch = ExperiencesBatch(states, actions, next_states, rewards, dones)
+        batch = ExperiencesBatch(
+            states, actions, next_states, rewards, dones, truncated=truncs
+        )
         agent.add_experiences_batch(batch)
 
         states = next_states
@@ -216,26 +236,32 @@ def train_parallel(
         terminations = dones | truncs
         terminated = np.any(terminations)
 
-        if agent.memory.size > min_memory and steps % train_every == 0:
+        [episode_scores.add(score) for score in scores[terminations]]
+
+        if agent.memory.size > cfg.min_memory and steps % cfg.train_every == 0:
             metrics = agent.train()
 
         if train_t0 is None and agent.train_steps > 0:
             train_t0 = time.time()
 
         if (
-            model_path is not None
+            cfg.model_path is not None
             and agent.train_steps > 0
-            and steps % (autosave_freq * train_every) == 0
+            and steps % (cfg.autosave_freq * cfg.train_every) == 0
         ):
-            agent.model.save(filepath=model_path)
-            print(f"💾 Model saved to '{model_path}'. ")
+            agent.model.save(filepath=cfg.model_path)
+            print(f"💾 Model saved to '{cfg.model_path}'. ")
 
-        if verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
-            _scores = scores if not terminated else scores[terminations]
+        if cfg.verbose and (terminated or steps % 10 == 0):  # Log each 10 steps
+            _current_scores = scores if not terminated else scores[terminations]
+            _episode_scores = (
+                episode_scores.to_array() if episode_scores.size > 0 else 0.0
+            )
             _print_progress(
                 episode=episodes,
                 steps=steps,
-                score=np.mean(_scores),
+                score=np.mean(_current_scores),
+                avg_score=np.mean(_episode_scores),
                 lives=None,
                 agent=agent,
                 train_t0=train_t0,
@@ -243,15 +269,15 @@ def train_parallel(
                 end="\n" if terminated else "\r",
             )
 
-        if terminated and max_score is not None and np.any(scores > max_score):
+        if terminated and cfg.max_score is not None and np.any(scores > cfg.max_score):
             print("🏆 Max score reached. Stopping training.")
             break
 
     envs.close()
 
-    if model_path is not None:
-        agent.model.save(filepath=model_path)
-        print(f"💾 Model saved to '{model_path}'. ")
+    if cfg.model_path is not None:
+        agent.model.save(filepath=cfg.model_path)
+        print(f"💾 Model saved to '{cfg.model_path}'. ")
 
     print("✅ Training finished.")
 
@@ -266,6 +292,7 @@ def _print_progress(
     episode: IntLike,
     steps: IntLike,
     score: Optional[float] = None,
+    avg_score: Optional[float] = None,
     lives: Optional[int] = None,
     agent: Optional[RLAgent] = None,
     train_t0: Optional[float] = None,
@@ -276,6 +303,9 @@ def _print_progress(
 
     if score is not None:
         parts.append(f"Score: {score:.1f}")
+
+    if avg_score is not None:
+        parts.append(f"Avg score: {avg_score:.1f}")
 
     if lives is not None:
         parts.append(f"Lives: {lives}")

@@ -71,7 +71,7 @@ agent = DQNAgent(
     model=model,
     batch_size=32,
     gamma=0.99,
-    memory_size=500_000,
+    memory_size=200_000,
     policy=policy,
     update_freq=10_000,
 )

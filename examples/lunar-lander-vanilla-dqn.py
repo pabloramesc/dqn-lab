@@ -4,7 +4,7 @@ import os
 import gymnasium as gym
 import keras
 
-LOAD_MODEL = False
+LOAD_MODEL = True
 MODEL_PATH = "models/lunar-lander-vanilla-dqn.keras"
 
 

@@ -1,1 +1,1 @@
-from .atari_dqn import build_atari_dqn
+from .atari_dqn import build_atari_vanilla_dqn, build_atari_rainbow_dqn, load_atari_rainbow_dqn

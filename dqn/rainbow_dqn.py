@@ -7,6 +7,7 @@ from .policies import ExplorationPolicy
 
 from typing import Optional
 
+
 class RainbowDQN(DQNAgent):
     def __init__(
         self,
@@ -26,7 +27,7 @@ class RainbowDQN(DQNAgent):
             policy=policy,
             batch_size=batch_size,
             memory_size=memory_size,
-            gamma=gamma,
+            gamma=gamma**n_step,
             update_freq=update_freq,
         )
         self.memory = NStepPER(

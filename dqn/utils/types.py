@@ -11,6 +11,7 @@ from typing import (
 
 import numpy as np
 from numpy.typing import NDArray, ArrayLike
+import tensorflow as tf
 
 
 @runtime_checkable
@@ -27,6 +28,9 @@ BoolLike = Union[bool, np.bool_, SupportsBool]
 FloatArray = Union[NDArray[np.floating], Sequence[float]]
 IntArray = Union[NDArray[np.integer], Sequence[int]]
 BoolArray = Union[NDArray[np.bool_], Sequence[bool]]
+
+SingleInput = Union[NDArray, tf.Tensor]
+ModelInput = Union[SingleInput, Sequence[SingleInput]]
 
 
 T = TypeVar("T", bound=np.generic)

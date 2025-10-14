@@ -1,5 +1,10 @@
 # %%
-# 🕹️ DQN Agent for Atari Breakout in Google DeepMind style
+# 🕹️ DQN Agent for Atari games
+GAME_NAME = "SpaceInvadersNoFrameskip-v4"
+MODEL_PATH = "models/space-invaders-vanilla-dqn-f32.keras"
+
+print("🕹️  Game environment:", GAME_NAME)
+
 
 # %%
 # 📦 Import modules and setup environment
@@ -13,7 +18,7 @@ from keras import backend, mixed_precision
 gym.register_envs(ale_py)
 
 # Set keras global policy to mixed_float16
-mixed_precision.set_global_policy("mixed_float16")
+# mixed_precision.set_global_policy("mixed_float16")
 print("Compute dtype:", mixed_precision.global_policy().compute_dtype)
 print("Variable dtype:", mixed_precision.global_policy().variable_dtype)
 
@@ -26,35 +31,33 @@ print("Image data format:", backend.image_data_format())
 # 🤖 Initialize the DQN agent
 from dqn import DQNAgent, EpsilonGreedyPolicy
 from dqn.wrappers import AtariWrapper
-from dqn.models import build_atari_dqn
+from dqn.models import build_atari_vanilla_dqn
 
 # Initialize environment state and action space dimensions
-env = gym.make("ALE/Pong-v5", render_mode="rgb_array", frameskip=1)
+env = gym.make(GAME_NAME, render_mode="rgb_array")
 env = AtariWrapper(env, frame_skip=4)
 
 state_shape = env.observation_space.shape
 num_actions = env.action_space.n  # type: ignore
 
 # Create the DQN agent
-model = build_atari_dqn(state_shape, num_actions)  # type: ignore
+model = build_atari_vanilla_dqn(state_shape, num_actions)  # type: ignore
 policy = EpsilonGreedyPolicy(decay_type="linear", epsilon_min=0.1, epsilon_decay=1e-5)
 agent = DQNAgent(
     model=model,
     batch_size=32,
     gamma=0.99,
-    memory_size=500_000,  # aprox. 2.6 GB of RAM per 100k samples
+    memory_size=200_000,  # aprox. 2.6 GB of RAM per 100k samples
     policy=policy,
     update_freq=10_000,
 )
 
 # Load pre-trained model if it exists
-model_path = "models/pong-vanilla-dqn.keras"
-
-if os.path.exists(model_path):
-    model = keras.models.load_model(filepath=model_path, compile=True)
+if os.path.exists(MODEL_PATH):
+    model = keras.models.load_model(filepath=MODEL_PATH, compile=True)
     agent.set_model(model)  # type: ignore
-    policy.epsilon = 1.0  # Resume with less exploration
-    print(f"➡️  Model loaded from '{model_path}'.")
+    policy.epsilon = 0.1  # Resume with less exploration
+    print(f"➡️  Model loaded from '{MODEL_PATH}'.")
 
 model.summary()  # type: ignore
 
@@ -65,20 +68,16 @@ agent.learn(
     env=env,  # type: ignore
     max_episodes=10_000,
     min_memory=50_000,
-    train_every=4,
-    model_path=model_path,
+    train_every=1,
+    model_path=MODEL_PATH,
     autosave_freq=10_000,
-    verbose=True,
+    verbose=2,
 )
-
-# Save the model
-agent.model.save(filepath=model_path)
-print(f"💾 Model saved to '{model_path}'.")
 
 
 # %%
 # 🧪 Test the trained agent
-env = gym.make("ALE/Pong-v5", render_mode="human", frameskip=1)
+env = gym.make(GAME_NAME, render_mode="human")
 env = AtariWrapper(env, frame_skip=4)
 
 agent.evaluate(env)  # type: ignore

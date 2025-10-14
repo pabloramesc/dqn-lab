@@ -1,6 +1,5 @@
 # %%
-# 🕹️ DQN for Atari Breakout with VGG-style CNN, dueling Q-network,
-# prioritized experience replay (PER), and vectorized environments.
+# 🕹️ Rainbow DQN for Atari Breakout
 
 
 # %%
@@ -110,10 +109,10 @@ model_path = "models/breakout-rainbow-dqn.keras"
 
 if os.path.exists(model_path):
     model = keras.models.load_model(
-        filepath=model_path, custom_objects={"DuelingHead": DuelingHead}, compile=True
+        filepath=model_path, compile=True, custom_objects={"DuelingHead": DuelingHead}
     )  # Use custom objects to deserialize DuelinHead custom layer
     agent.set_model(model)  # type: ignore
-    policy.epsilon = 1.0  # Resume with less exploration
+    policy.epsilon = 0.1  # Resume with less exploration
     print(f"➡️  Model loaded from '{model_path}'.")
 
 model.summary()  # type: ignore
@@ -132,9 +131,6 @@ agent.learn_parallel(
     verbose=True,
 )
 
-# Save the model
-agent.model.save(filepath=model_path)
-print(f"💾 Model saved to '{model_path}'.")
 
 # %%
 # 🧪 Test the trained agent

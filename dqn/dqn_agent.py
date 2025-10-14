@@ -64,7 +64,7 @@ class DQNAgent:
         self.target_model = keras.models.clone_model(model)
         self.target_model.set_weights(model.get_weights())
 
-    def act(self, state: np.ndarray) -> int:
+    def act(self, state: np.ndarray, training: bool = True) -> int:
         """Selects an action for a single state using the current policy.
 
         Args:
@@ -73,11 +73,11 @@ class DQNAgent:
         Returns:
             Index of the selected action.
         """
-        q_values = self.model(state[None, ...], training=False).numpy()
+        q_values = self.model(state[None, ...], training=training).numpy()
         action = self.policy.select_action(q_values[0])
         return action
 
-    def act_on_batch(self, states: np.ndarray) -> np.ndarray:
+    def act_on_batch(self, states: np.ndarray, training: bool = True) -> np.ndarray:
         """Selects actions for a batch of states using the current policy.
 
         Args:
@@ -86,7 +86,7 @@ class DQNAgent:
         Returns:
             Array of selected action indices with shape (batch_size,).
         """
-        q_values = self.model(states, training=False).numpy()
+        q_values = self.model(states, training=training).numpy()
         actions = self.policy.select_action_batch(q_values)
         return actions
 
@@ -133,7 +133,7 @@ class DQNAgent:
             self.update_target_model()
 
         self.policy.update_params()
-        
+
         # metrics["memory_size"] = self.memory.size
         # metrics["train_steps"] = self.train_steps
         # metrics.update(self.policy.dynamic_params)
@@ -150,8 +150,8 @@ class DQNAgent:
         self, batch: ExperiencesBatch
     ) -> tuple[np.ndarray, np.ndarray]:
         """NumPy and Keras target computation."""
-        q_values = self.model(batch.states, training=False).numpy()
-        q_next = self.target_model(batch.next_states, training=False).numpy()
+        q_values = self.model(batch.states, training=True).numpy()
+        q_next = self.target_model(batch.next_states, training=True).numpy()
 
         # Bellman equation
         max_next_q = np.max(q_next, axis=1)
@@ -188,8 +188,8 @@ class DQNAgent:
         rewards: tf.Tensor,
         dones: tf.Tensor,
     ) -> tuple[tf.Tensor, tf.Tensor]:
-        q_values = self.model(states, training=False)
-        q_next = self.target_model(next_states, training=False)
+        q_values = self.model(states, training=True)
+        q_next = self.target_model(next_states, training=True)
 
         max_q_next = tf.reduce_max(q_next, axis=1)
         mask = tf.cast(tf.logical_not(dones), dtype=np.float32)
