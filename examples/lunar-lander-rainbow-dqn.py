@@ -5,7 +5,7 @@ import gymnasium as gym
 import keras
 
 LOAD_MODEL = True
-MODEL_PATH = "models/lunar-lander-rainbow-dqn-v3.keras"
+MODEL_PATH = "models/lunar-lander-rainbow-dqn-v4.keras"
 
 
 # %%
@@ -105,7 +105,7 @@ agent = RainbowDQN(
 
 # %%
 # 💪 Train the agent
-agent.learn(env, min_memory=1000, max_episodes=1000, model_path=MODEL_PATH)  # type: ignore
+agent.learn(env, min_memory=1000, max_episodes=1000, model_path=MODEL_PATH, verbose=2)  # type: ignore
 
 
 # %%

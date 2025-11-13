@@ -6,20 +6,9 @@
 import os
 import ale_py
 import gymnasium as gym
-import keras as keras
-from keras import backend, mixed_precision
 
 # Ensure ALE environments are registered
 gym.register_envs(ale_py)
-
-# Set keras global policy to mixed_float16
-mixed_precision.set_global_policy("mixed_float16")
-print("Compute dtype:", mixed_precision.global_policy().compute_dtype)
-print("Variable dtype:", mixed_precision.global_policy().variable_dtype)
-
-# Ensure keras image format is (height, width, channels) - applies to Conv2D layers
-backend.set_image_data_format("channels_last")
-print("Image data format:", backend.image_data_format())
 
 
 # %%
@@ -77,7 +66,7 @@ agent = DQNAgent(
 )
 
 # Load pre-trained model if it exists
-model_path = "models/breakout-vanilla-dqn.keras"
+model_path = "models/breakout-vanilla-dqn-v3.keras"
 
 if os.path.exists(model_path):
     model = keras.models.load_model(filepath=model_path, compile=True)
@@ -98,7 +87,7 @@ agent.learn(
     max_score=1000,
     model_path=model_path,
     autosave_freq=10_000,
-    verbose=True,
+    verbose=2,
 )
 
 # Save the model

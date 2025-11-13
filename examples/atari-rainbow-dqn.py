@@ -11,20 +11,9 @@ print("🕹️  Game environment:", GAME_NAME)
 import os
 import ale_py
 import gymnasium as gym
-import keras as keras
-from keras import backend, mixed_precision
 
 # Ensure ALE environments are registered
 gym.register_envs(ale_py)
-
-# Set keras global policy to mixed_float16
-# mixed_precision.set_global_policy("mixed_float16")
-print("Compute dtype:", mixed_precision.global_policy().compute_dtype)
-print("Variable dtype:", mixed_precision.global_policy().variable_dtype)
-
-# Ensure keras image format is (height, width, channels) - applies to Conv2D layers
-backend.set_image_data_format("channels_last")
-print("Image data format:", backend.image_data_format())
 
 
 # %%
@@ -62,7 +51,7 @@ agent = RainbowDQN(
     n_step=3,
     alpha=0.6,
     beta=0.4,
-    beta_annealing=0.0,
+    beta_annealing=1e-6,
 )
 
 # Load pre-trained model if it exists

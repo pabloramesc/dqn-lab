@@ -179,7 +179,7 @@ class DQNAgent:
         )  # type: ignore
         return q_values, td_errors
 
-    @tf.function
+    @tf.function(jit_compile=True)
     def _compute_targets_helper(
         self,
         states: tf.Tensor,

@@ -23,14 +23,12 @@ class NoisyDense(layers.Layer):
                 -1 / np.sqrt(input_dim), 1 / np.sqrt(input_dim)
             ),
             trainable=True,
-            dtype=self.compute_dtype,
         )
         self.sigma_w = self.add_weight(
             name="sigma_w",
             shape=[input_dim, self.units],
             initializer=keras.initializers.Constant(self.sigma_init),
             trainable=True,
-            dtype=self.compute_dtype,
         )
         self.mu_b = self.add_weight(
             name="mu_b",
@@ -39,24 +37,20 @@ class NoisyDense(layers.Layer):
                 -1 / np.sqrt(input_dim), 1 / np.sqrt(input_dim)
             ),
             trainable=True,
-            dtype=self.compute_dtype,
         )
         self.sigma_b = self.add_weight(
             name="sigma_b",
             shape=[self.units],
             initializer=keras.initializers.Constant(self.sigma_init),
             trainable=True,
-            dtype=self.compute_dtype,
         )
 
-    # @tf.function(jit_compile=True)
+    @tf.function(jit_compile=True)
     def call(self, inputs, training=True):
         if training:
             # Factorized Gaussian noise (Fortunato et al., 2018)
-            epsilon_in = tf.random.normal(
-                [inputs.shape[-1], 1], dtype=self.compute_dtype
-            )
-            epsilon_out = tf.random.normal([1, self.units], dtype=self.compute_dtype)
+            epsilon_in = tf.random.normal([inputs.shape[-1], 1])
+            epsilon_out = tf.random.normal([1, self.units])
             f_in = tf.sign(epsilon_in) * tf.sqrt(tf.abs(epsilon_in))
             f_out = tf.sign(epsilon_out) * tf.sqrt(tf.abs(epsilon_out))
             epsilon_w = f_in * f_out
