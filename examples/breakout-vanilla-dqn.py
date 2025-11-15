@@ -6,6 +6,7 @@
 import os
 import ale_py
 import gymnasium as gym
+import keras
 
 # Ensure ALE environments are registered
 gym.register_envs(ale_py)

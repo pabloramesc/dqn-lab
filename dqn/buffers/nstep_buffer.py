@@ -120,6 +120,7 @@ class NStepPER(OptimizedPER):
             reward=R,
             next_state=last_exp.next_state,
             done=last_exp.done,
+            steps=i + 1,
         )
 
     def _flush_single(self, agent_id: int, td_error: float) -> None:

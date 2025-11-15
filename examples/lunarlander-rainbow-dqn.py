@@ -1,11 +1,11 @@
 # %%
-# 🌑 DQN for LunarLander-v3
+# 🌑 Rainbow DQN for LunarLander-v3
 import os
 import gymnasium as gym
 import keras
 
-LOAD_MODEL = True
-MODEL_PATH = "models/lunar-lander-vanilla-dqn.keras"
+LOAD_MODEL = False
+MODEL_PATH = "models/lunar-lander-rainbow-dqn.keras"
 
 
 # %%
@@ -37,18 +37,29 @@ env.close()
 
 # %%
 # 🧠 DQN model and agent definition
-from keras.models import Model, Sequential
-from keras.layers import Dense
-from keras.losses import Huber
+from keras.models import Model
+from keras.layers import Dense, Input
 from keras.optimizers import Adam
+from dqn.layers import DuelingHead, NoisyDense
 
 
 def create_model(state_shape: tuple[int, ...], num_actions: int) -> Model:
-    model = Sequential()
-    model.add(Dense(64, activation="relu", input_shape=state_shape))
-    model.add(Dense(64, activation="relu"))
-    model.add(Dense(num_actions, activation="linear"))
-    model.compile(loss=Huber(delta=1.0), optimizer=Adam(learning_rate=1e-3))  # type: ignore
+    inputs = Input(shape=state_shape, dtype="float32")
+    x = Dense(64, activation="relu")(inputs)
+
+    # Value head
+    v = NoisyDense(64, activation="relu")(x)
+    v = NoisyDense(1, activation="linear")(v)
+
+    # Advantage head
+    a = NoisyDense(64, activation="relu")(x)
+    a = NoisyDense(num_actions, activation="linear")(a)
+
+    # Combine value and advantage: Q(s, a) = V(s) + A(s, a)
+    q = DuelingHead(dtype="float32")([v, a])
+
+    model = Model(inputs=inputs, outputs=q)
+    model.compile(optimizer=Adam(learning_rate=1e-3))  # type: ignore
     return model
 
 
@@ -59,40 +70,41 @@ num_actions = env.action_space.n  # type: ignore
 
 # Create or load the model
 if LOAD_MODEL and os.path.exists(MODEL_PATH):
-    model = keras.models.load_model(MODEL_PATH, compile=True)
-    print(f"➡️ Loaded model from '{MODEL_PATH}'.")
-    epsilon0 = 0.1  # Less exploration if continuing from pretrained model
+    model = keras.models.load_model(
+        MODEL_PATH, compile=True, custom_objects={"DuelingHead": DuelingHead}
+    )
+    print(f"➡️  Loaded model from '{MODEL_PATH}'.")
 
 else:
     model = create_model(state_shape, num_actions)  # type: ignore
-    print("➡️ New model created.")
-    epsilon0 = 1.0  # Start with full exploration for fresh training
+    print("➡️  New model created.")
 
 model.summary()  # type: ignore
 
 # Create the DQN agent
-from dqn import DQNAgent, EpsilonGreedyPolicy
+from dqn import RainbowDQN, EpsilonGreedyPolicy
 
 policy = EpsilonGreedyPolicy(
-    epsilon=epsilon0,
-    epsilon_min=0.01,
-    decay_type="linear",
-    epsilon_decay=1e-4,
+    epsilon=0.01,
+    decay_type="fixed",
 )
 
-agent = DQNAgent(
+agent = RainbowDQN(
     model=model,
     policy=policy,
     batch_size=32,
     memory_size=100_000,
-    gamma=0.99,
     update_freq=1000,
+    gamma=0.99,
+    n_step=3,
+    alpha=0.6,
+    beta=0.4,
 )
 
 
 # %%
 # 💪 Train the agent
-agent.learn(env, min_memory=1000, max_episodes=1000, model_path=MODEL_PATH)  # type: ignore
+agent.learn(env, min_memory=1000, max_episodes=1000, model_path=MODEL_PATH, verbose=2)  # type: ignore
 
 
 # %%

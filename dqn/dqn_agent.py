@@ -26,6 +26,7 @@ class DQNAgent:
         memory_size: int = 100_000,
         gamma: float = 0.99,
         update_freq: int = 10_000,
+        clipnorm: float = 10.0,
     ) -> None:
         """Initializes the DQN agent.
 
@@ -51,6 +52,7 @@ class DQNAgent:
         self.memory = ReplayBuffer(memory_size)
         self.gamma = np.float32(gamma)
         self.update_freq = int(update_freq)
+        self.clipnorm = np.float32(clipnorm)
 
         self.train_steps = int(0)
 
@@ -140,69 +142,48 @@ class DQNAgent:
         return metrics
 
     def _train_interface(self, batch: ExperiencesBatch) -> dict:
-        """Interface method to compute targets and perform train on batch."""
-        # q_values, td_errors = self._compute_targets(batch)
-        q_values, td_errors = self._compute_targets_optimized(batch)
-        metrics = self.model.train_on_batch(batch.states, q_values, return_dict=True)
-        return metrics
+        loss = self._train_step(
+            states=tf.convert_to_tensor(batch.states, dtype=tf.float32),
+            actions=tf.convert_to_tensor(batch.actions, dtype=tf.int32),
+            next_states=tf.convert_to_tensor(batch.next_states, dtype=tf.float32),
+            rewards=tf.convert_to_tensor(batch.rewards, dtype=tf.float32),
+            dones=tf.convert_to_tensor(batch.dones, dtype=tf.bool),
+        )
+        return {"loss": loss.numpy().item()}
 
-    def _compute_targets(
-        self, batch: ExperiencesBatch
-    ) -> tuple[np.ndarray, np.ndarray]:
-        """NumPy and Keras target computation."""
-        q_values = self.model(batch.states, training=True).numpy()
-        q_next = self.target_model(batch.next_states, training=True).numpy()
-
-        # Bellman equation
-        max_next_q = np.max(q_next, axis=1)
-        q_target = batch.rewards + self.gamma * max_next_q * (~batch.dones)
-
-        # Update TD errors and PER buffer
-        idx = np.arange(batch.size)
-        td_errors = q_target - q_values[idx, batch.actions]
-
-        # Update Q-values (after TD errors calculation)
-        q_values[idx, batch.actions] = q_target
-
-        return q_values, td_errors
-
-    def _compute_targets_optimized(
-        self, batch: ExperiencesBatch
-    ) -> tuple[tf.Tensor, tf.Tensor]:
-        """TensorFlow optimized target computation."""
-        q_values, td_errors = self._compute_targets_helper(
-            batch.states,
-            batch.actions,
-            batch.next_states,
-            batch.rewards,
-            batch.dones,
-        )  # type: ignore
-        return q_values, td_errors
-
-    @tf.function(jit_compile=True)
-    def _compute_targets_helper(
+    @tf.function
+    def _train_step(
         self,
         states: tf.Tensor,
         actions: tf.Tensor,
         next_states: tf.Tensor,
         rewards: tf.Tensor,
         dones: tf.Tensor,
-    ) -> tuple[tf.Tensor, tf.Tensor]:
-        q_values = self.model(states, training=True)
-        q_next = self.target_model(next_states, training=True)
+    ) -> tf.Tensor:
 
+        # Compute target Q-values
+        q_next = self.target_model(next_states, training=False)
         max_q_next = tf.reduce_max(q_next, axis=1)
-        mask = tf.cast(tf.logical_not(dones), dtype=np.float32)
-        q_target = rewards + self.gamma * max_q_next * mask
+        not_done_mask = tf.cast(tf.logical_not(dones), dtype=tf.float32)
+        q_target = rewards + self.gamma * max_q_next * not_done_mask
+        
+        # Compute loss insde gradient tape
+        with tf.GradientTape() as tape:
+            q_values = self.model(states, training=True)
+            batch_indices = tf.range(actions.shape[0])
+            action_indices = tf.stack([batch_indices, actions], axis=1)
+            q_actual = tf.gather_nd(q_values, action_indices)
 
-        indices = tf.range(actions.shape[0])
-        indices = tf.stack([indices, actions], axis=1)
+            huber = tf.keras.losses.Huber()
+            loss = huber(q_target, q_actual)
 
-        q_actual = tf.gather_nd(q_values, indices)
-        td_errors = q_target - q_actual
-
-        q_values = tf.tensor_scatter_nd_update(q_values, indices, q_target)
-        return q_values, td_errors
+        # Apply gradients
+        vars = self.model.trainable_variables
+        grads = tape.gradient(loss, vars)
+        grads, _ = tf.clip_by_global_norm(grads, self.clipnorm)
+        self.model.optimizer.apply_gradients(zip(grads, vars))
+        
+        return loss
 
     def evaluate(self, env: GymEnv, **kwargs):
         return evaluate_agent(env, self, render=True, verbose=True, **kwargs)

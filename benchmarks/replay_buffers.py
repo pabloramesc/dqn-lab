@@ -74,8 +74,9 @@ buffers: dict[str, BufferProtocol] = {
 }
 
 print("Filling buffers...")
-for buff in buffers.values():
+for name, buff in buffers.items():    
     buff.add_batch(dummy_batch)
+    print(f"> {name} filled.")
 
 # Run benchmarks
 print("\n=== Add experience timing ===")

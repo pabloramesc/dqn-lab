@@ -1,14 +1,12 @@
 import time
 from dataclasses import dataclass
-from tkinter import N
-from tkinter.tix import Tree
 from typing import Any, Optional, Protocol, Tuple
 
 import numpy as np
 from keras import Model
 from numpy.typing import NDArray
 
-from .buffers import ReplayBuffer, NumpyBuffer
+from .buffers import NumpyBuffer, ReplayBuffer
 from .experiences import Experience, ExperiencesBatch
 from .policies import ExplorationPolicy
 from .utils.formatting import format_time

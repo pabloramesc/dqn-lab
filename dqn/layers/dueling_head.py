@@ -10,7 +10,6 @@ class DuelingHead(keras.Layer):
     Formula: Q(s, a) = V(s) + (A(s, a) - mean(A(s, ·)))
     """
 
-    @tf.function(jit_compile=True)
     def call(self, inputs: tuple[tf.Tensor, tf.Tensor]):
         """
         Compute Q-values from value and advantage streams.

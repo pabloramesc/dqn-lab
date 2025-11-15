@@ -14,13 +14,17 @@ The `dqn` package is a custom implementation of a Deep Q-Network (DQN) agent wit
 
 ## Examples
 
-### 1. Taxi Q-Learning ([`examples/taxi-qlearning.py`](examples/taxi-qlearning.py))
+### Taxi Q-Learning
 
 Classic tabular Q-Learning for Taxi-v3 using NumPy.
+[View example](examples/taxi-qlearning.py)
 
-### 2. CartPole DQN ([`examples/cartpole-dqn.py`](examples/cartpole-dqn.py))
+### CartPole DQN
 
 DQN for CartPole-v1 using TensorFlow and Keras.
+[View example](examples/cartpole-dqn.py)
+
+**Key features:**
 
 - Uses a simple feedforward neural network to approximate Q-values.
 - Utilizes [`DQNAgent`](dqn/dqn_agent.py) class with an [esilon-greedy](dqn/policies/epsilon_greedy.py)
@@ -28,17 +32,23 @@ DQN for CartPole-v1 using TensorFlow and Keras.
 - Implements experience replay through [`ReplayBuffer`](dqn/buffers/replay_buffer.py) class for stable learning.
 - Contains raw step-by-step DQN training loop.
 
-### 3. Vanilla DQN ([`examples/breakout-vanilla-dqn.py`](examples/breakout-vanilla-dqn.py))
+### Atari Vanilla DQN
 
-DQN agent for Atari Breakout, based on the original Google DeepMind implementation:
+DQN agent for Atari, based on the original Google DeepMind implementation.
+[View example](examples/atari-vanilla-dqn.py)
+
+**Key features:**
 
 - Employs Double-DQN for more stable learning.
 - Process game frames using convolutional neural networks (CNNs).
 - Utilizes frame stacking of 4 frames to capture movement.
 
-### 4. Rainbow DQN ([`examples/breakout-rainbow-dqn.py`](examples/breakout-rainbow-dqn.py))
+### Atari Rainbow DQN
 
-Rainbow DQN agent for Atari Breakout that combines multiple enhancements to improve learning performance:
+Rainbow DQN agent for Atari that combines multiple enhancements to improve learning performance.
+[View example](examples/atari-rainbow-dqn.py)
+
+**Key features:**
 
 - Dueling Q-Networks to separately estimate state values and advantages.
 - Prioritized Experience Replay (PER) for more efficient learning.

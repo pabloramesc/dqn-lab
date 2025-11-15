@@ -1,3 +1,4 @@
+from ast import In
 from typing import (
     Protocol,
     Sequence,
@@ -25,9 +26,9 @@ FloatLike = Union[float, np.floating, SupportsFloat]
 IntLike = Union[int, np.integer, SupportsInt]
 BoolLike = Union[bool, np.bool_, SupportsBool]
 
-FloatArray = Union[NDArray[np.floating], Sequence[float]]
-IntArray = Union[NDArray[np.integer], Sequence[int]]
-BoolArray = Union[NDArray[np.bool_], Sequence[bool]]
+FloatArray = Union[NDArray[np.floating], Sequence[FloatLike]]
+IntArray = Union[NDArray[np.integer], Sequence[IntLike]]
+BoolArray = Union[NDArray[np.bool_], Sequence[BoolLike]]
 
 SingleInput = Union[NDArray, tf.Tensor]
 ModelInput = Union[SingleInput, Sequence[SingleInput]]

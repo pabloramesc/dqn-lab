@@ -1,5 +1,6 @@
 # %%
 # 🕹️ Rainbow DQN Agent for Atari games
+LOAD_MODEL = True
 GAME_NAME = "SpaceInvadersNoFrameskip-v4"
 MODEL_PATH = "models/space-invaders-rainbow-dqn.keras"
 
@@ -18,7 +19,6 @@ gym.register_envs(ale_py)
 
 # %%
 # 🤖 Initialize the DQN agent
-from dqn import RainbowDQN, EpsilonGreedyPolicy
 from dqn.wrappers import AtariWrapper
 from dqn.models import build_atari_rainbow_dqn, load_atari_rainbow_dqn
 from gymnasium.vector import AsyncVectorEnv
@@ -37,9 +37,20 @@ envs = AsyncVectorEnv([make_env for _ in range(num_envs)])
 state_shape = envs.single_observation_space.shape
 num_actions = envs.single_action_space.n  # type: ignore
 
-# Create the DQN agent
+# Create the policy model
 model = build_atari_rainbow_dqn(state_shape, num_actions)  # type: ignore
-# Dont use epsilon-greedy policy (exploration comes from noisy nets)
+
+# Load pre-trained model if it exists
+if LOAD_MODEL and os.path.exists(MODEL_PATH):
+    model = load_atari_rainbow_dqn(MODEL_PATH)
+    agent.set_model(model)  # type: ignore
+    print(f"➡️  Model loaded from '{MODEL_PATH}'.")
+
+model.summary()  # type: ignore
+
+
+from dqn import RainbowDQN, EpsilonGreedyPolicy
+
 policy = EpsilonGreedyPolicy(decay_type="fixed", epsilon=0.01)
 agent = RainbowDQN(
     model=model,
@@ -53,14 +64,6 @@ agent = RainbowDQN(
     beta=0.4,
     beta_annealing=1e-6,
 )
-
-# Load pre-trained model if it exists
-if os.path.exists(MODEL_PATH):
-    model = load_atari_rainbow_dqn(MODEL_PATH)
-    agent.set_model(model)  # type: ignore
-    print(f"➡️  Model loaded from '{MODEL_PATH}'.")
-
-model.summary()  # type: ignore
 
 
 # %%

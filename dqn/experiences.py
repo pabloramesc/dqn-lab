@@ -1,4 +1,4 @@
-from os import truncate
+import tensorflow as tf
 from typing import NamedTuple, Optional, Sequence
 
 import numpy as np
@@ -24,6 +24,7 @@ class Experience(NamedTuple):
     reward: float
     done: bool
     truncated: bool = False
+    steps: int = 1  # For n-step returns, default is 1 (i.e., single step)
 
     @classmethod
     def create(
@@ -34,6 +35,7 @@ class Experience(NamedTuple):
         reward: FloatLike,
         done: BoolLike,
         truncated: Optional[BoolLike] = False,
+        steps: Optional[IntLike] = 1,
     ):
         """Factory method to enforce type conversion and check state consistency."""
         state = np.asarray(state)
@@ -52,6 +54,7 @@ class Experience(NamedTuple):
             reward=float(reward),
             done=bool(done),
             truncated=bool(truncated),
+            steps=int(steps),
         )
 
 
@@ -68,6 +71,7 @@ class ExperiencesBatch:
         indices: Optional[IntArray] = None,
         weights: Optional[FloatArray] = None,
         truncated: Optional[BoolArray] = None,
+        steps: Optional[IntArray] = None,
     ):
         self.states = np.asarray(states)
         self.actions = np.asarray(actions, dtype=np.int32)
@@ -77,12 +81,21 @@ class ExperiencesBatch:
         self.indices = to_optional_array(indices, dtype=np.int32)
         self.weights = to_optional_array(weights, dtype=np.float32)
         self.truncated = to_optional_array(truncated, dtype=np.bool_)
+        self.steps = to_optional_array(steps, dtype=np.int32)
         self._check_consistency()
 
     @property
     def size(self) -> int:
         """Number of experiences in the batch."""
         return self.states.shape[0]
+
+    @classmethod
+    def from_experiences(
+        cls, experiences: Sequence[Experience], indices: Optional[IntArray] = None
+    ):
+        """Create an ExperiencesBatch from a list of Experience objects."""
+        states, actions, next_states, rewards, dones, truncated, steps = zip(*experiences)
+        return cls(states, actions, next_states, rewards, dones, indices=indices, truncated=truncated, steps=steps)  # type: ignore
 
     def to_experiences(self) -> list[Experience]:
         """Convert the batch to a list of `Experience` objects."""
@@ -104,14 +117,6 @@ class ExperiencesBatch:
 
         return experiences
 
-    @classmethod
-    def from_experiences(
-        cls, experiences: Sequence[Experience], indices: Optional[IntArray] = None
-    ):
-        """Create an ExperiencesBatch from a list of Experience objects."""
-        states, actions, next_states, rewards, dones, truncated = zip(*experiences)
-        return cls(states, actions, next_states, rewards, dones, indices=indices, truncated=truncated)  # type: ignore
-
     def _check_consistency(self):
         if self.states.shape != self.next_states.shape:
             raise ValueError("States and next states must have same shape.")
@@ -125,6 +130,7 @@ class ExperiencesBatch:
             "Indices": self.indices,
             "Weights": self.weights,
             "Truncated": self.truncated,
+            "Steps": self.steps,
         }
 
         for name, arr in arrays_1d.items():
