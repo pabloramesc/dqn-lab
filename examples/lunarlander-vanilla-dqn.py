@@ -1,5 +1,6 @@
 # %%
 # 🌑 DQN for LunarLander-v3
+from ast import In
 import os
 from tabnanny import verbose
 import gymnasium as gym
@@ -39,13 +40,14 @@ env.close()
 # %%
 # 🧠 DQN model and agent definition
 from keras.models import Model, Sequential
-from keras.layers import Dense
+from keras.layers import Dense, Input
 from keras.optimizers import Adam
 
 
 def create_model(state_shape: tuple[int, ...], num_actions: int) -> Model:
     model = Sequential()
-    model.add(Dense(64, activation="relu", input_shape=state_shape))
+    model.add(Input(shape=state_shape))
+    model.add(Dense(64, activation="relu"))
     model.add(Dense(64, activation="relu"))
     model.add(Dense(num_actions, activation="linear"))
     model.compile(optimizer=Adam(learning_rate=1e-3))  # type: ignore

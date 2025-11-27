@@ -66,6 +66,7 @@ class DQNAgent:
         self.target_model = keras.models.clone_model(model)
         self.target_model.set_weights(model.get_weights())
 
+    @profile
     def act(self, state: np.ndarray, training: bool = True) -> int:
         """Selects an action for a single state using the current policy.
 
@@ -112,6 +113,7 @@ class DQNAgent:
         """Updates the target network with the weights of the main model."""
         self.target_model.set_weights(self.model.get_weights())
 
+    @profile
     def train(self) -> dict | None:
         """Performs a single training step if enough experiences are available,
         and update target network based on the update frequency. Increments train steps counter.
@@ -141,17 +143,22 @@ class DQNAgent:
         # metrics.update(self.policy.dynamic_params)
         return metrics
 
+    # @profile
     def _train_interface(self, batch: ExperiencesBatch) -> dict:
-        loss = self._train_step(
-            states=tf.convert_to_tensor(batch.states, dtype=tf.float32),
-            actions=tf.convert_to_tensor(batch.actions, dtype=tf.int32),
-            next_states=tf.convert_to_tensor(batch.next_states, dtype=tf.float32),
-            rewards=tf.convert_to_tensor(batch.rewards, dtype=tf.float32),
-            dones=tf.convert_to_tensor(batch.dones, dtype=tf.bool),
-        )
-        return {"loss": loss.numpy().item()}
+        # Convert batch numpy arrays to tensors
+        states = tf.convert_to_tensor(batch.states, dtype=tf.float32)
+        actions = tf.convert_to_tensor(batch.actions, dtype=tf.int32)
+        next_states = tf.convert_to_tensor(batch.next_states, dtype=tf.float32)
+        rewards = tf.convert_to_tensor(batch.rewards, dtype=tf.float32)
+        dones = tf.convert_to_tensor(batch.dones, dtype=tf.bool)
 
-    @tf.function
+        # Call the training step (optimized TensorFlow function)
+        loss = self._train_step(states, actions, next_states, rewards, dones)
+
+        # Return training metrics
+        return {"loss": loss}
+
+    @tf.function(jit_compile=True)
     def _train_step(
         self,
         states: tf.Tensor,
@@ -167,11 +174,13 @@ class DQNAgent:
         not_done_mask = tf.cast(tf.logical_not(dones), dtype=tf.float32)
         q_target = rewards + self.gamma * max_q_next * not_done_mask
         
-        # Compute loss insde gradient tape
+        # Prepare indices to gather the Q-values for taken actions
+        batch_indices = tf.range(actions.shape[0])
+        action_indices = tf.stack([batch_indices, actions], axis=1)
+
+        # Compute loss inside gradient tape
         with tf.GradientTape() as tape:
             q_values = self.model(states, training=True)
-            batch_indices = tf.range(actions.shape[0])
-            action_indices = tf.stack([batch_indices, actions], axis=1)
             q_actual = tf.gather_nd(q_values, action_indices)
 
             huber = tf.keras.losses.Huber()
@@ -182,14 +191,14 @@ class DQNAgent:
         grads = tape.gradient(loss, vars)
         grads, _ = tf.clip_by_global_norm(grads, self.clipnorm)
         self.model.optimizer.apply_gradients(zip(grads, vars))
-        
+
         return loss
 
     def evaluate(self, env: GymEnv, **kwargs):
-        return evaluate_agent(env, self, render=True, verbose=True, **kwargs)
+        return evaluate_agent(env=env, agent=self, render=True, verbose=True, **kwargs)
 
     def learn(self, env: GymEnv, **kwargs):
-        return train_agent(env, self, **kwargs)
+        return train_agent(env=env, agent=self, **kwargs)
 
     def learn_parallel(self, envs: VectEnv, **kwargs):
-        return train_parallel(envs, self, **kwargs)
+        return train_parallel(envs=envs, agent=self, **kwargs)

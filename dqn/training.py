@@ -58,7 +58,7 @@ class TrainConfig:
     verbose: int = 1
     score_window: int = 100
 
-
+@profile
 def train_agent(
     env: GymEnv,
     agent: RLAgent,
